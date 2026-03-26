@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'features/login/screens/login_screen.dart';
+import 'core/models/call_info.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/dialer/screens/dialer_screen.dart';
 import 'features/in_call/screens/screens.dart';
@@ -11,20 +11,16 @@ import 'features/admission_calling/screens/response_list_screen.dart';
 import 'features/admission_calling/screens/sub_response_list_screen.dart';
 import 'features/admission_calling/screens/student_list_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/notifications/screens/notification_centre_screen.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/home',
   errorBuilder: (context, state) => Scaffold(
     body: Center(
       child: Text('Error: ${state.error}'),
     ),
   ),
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-      name: 'login',
-    ),
     GoRoute(
       path: '/home',
       builder: (context, state) => const HomeScreen(),
@@ -37,12 +33,29 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/in-call',
-      builder: (context, state) => const ActiveCallScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final callInfo = extra?['callInfo'] as CallInfo?;
+        if (callInfo == null) {
+          return const Scaffold(
+            body: Center(child: Text('No active call')),
+          );
+        }
+        return ActiveCallScreen(callInfo: callInfo);
+      },
       name: 'in-call',
     ),
     GoRoute(
       path: '/incoming',
-      builder: (context, state) => const IncomingCallScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final phoneNumber = extra?['phoneNumber'] as String? ?? '';
+        return IncomingCallScreen(
+          phoneNumber: phoneNumber,
+          displayName: extra?['displayName'] as String?,
+          callId: extra?['callId'] as String?,
+        );
+      },
       name: 'incoming',
     ),
     GoRoute(
@@ -112,6 +125,11 @@ final GoRouter router = GoRouter(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
       name: 'settings',
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationCentreScreen(),
+      name: 'notifications',
     ),
   ],
 );

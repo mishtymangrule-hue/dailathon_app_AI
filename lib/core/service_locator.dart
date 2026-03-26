@@ -6,9 +6,12 @@ import 'package:dailathon_dialer/core/channels/ussd_event_channel.dart';
 import 'package:dailathon_dialer/core/repositories/call_log_repository.dart';
 import 'package:dailathon_dialer/core/repositories/call_forwarding_repository.dart';
 import 'package:dailathon_dialer/core/repositories/crm_repository.dart';
+import 'package:dailathon_dialer/core/repositories/notification_repository.dart';
 import 'package:dailathon_dialer/core/api/api_client.dart';
 import 'package:dailathon_dialer/core/services/call_event_logger.dart';
-import 'package:dailathon_dialer/features/login/bloc/login_bloc.dart';
+import 'package:dailathon_dialer/core/services/call_event_queue.dart';
+import 'package:dailathon_dialer/core/services/crm_reporting_service.dart';
+import 'package:dailathon_dialer/core/services/notification_sync_service.dart';
 import 'package:dailathon_dialer/features/dialer/bloc/dialer_bloc.dart';
 import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
 import 'package:dailathon_dialer/features/contacts/bloc/contacts_bloc.dart';
@@ -17,6 +20,8 @@ import 'package:dailathon_dialer/features/blocked_numbers/bloc/blocked_numbers_b
 import 'package:dailathon_dialer/features/admission_calling/bloc/admission_calling_bloc.dart';
 import 'package:dailathon_dialer/features/settings/bloc/settings_bloc.dart';
 import 'package:dailathon_dialer/features/home/bloc/home_bloc.dart';
+import 'package:dailathon_dialer/features/notifications/bloc/notifications_bloc.dart';
+import 'package:dailathon_dialer/features/call_sync/bloc/call_sync_bloc.dart';
 
 /// Simple service locator for dependency injection (no external packages).
 /// 
@@ -40,15 +45,18 @@ class ServiceLocator {
   late CallLogRepository _callLogRepository;
   late CallForwardingRepository _callForwardingRepository;
   late CrmRepository _crmRepository;
+  late NotificationRepository _notificationRepository;
 
   // API
   late ApiClient _apiClient;
 
   // Services
   late CallEventLogger _callEventLogger;
+  late CallEventQueue _callEventQueue;
+  late CrmReportingService _crmReportingService;
+  late NotificationSyncService _notificationSyncService;
 
   // BLoCs
-  late LoginBloc _loginBloc;
   late DialerBloc _dialerBloc;
   late InCallBloc _inCallBloc;
   late CallLogBloc _callLogBloc;
@@ -57,6 +65,8 @@ class ServiceLocator {
   late AdmissionCallingBloc _admissionCallingBloc;
   late SettingsBloc _settingsBloc;
   late HomeBloc _homeBloc;
+  late NotificationsBloc _notificationsBloc;
+  late CallSyncBloc _callSyncBloc;
 
   /// Initialize all dependencies.
   /// 
@@ -87,6 +97,7 @@ class ServiceLocator {
     );
     _callForwardingRepository = CallForwardingRepository(_callMethodChannel);
     _crmRepository = CrmRepository(apiClient: _apiClient);
+    _notificationRepository = NotificationRepository.instance;
 
     // ============ Services ============
     
@@ -94,18 +105,35 @@ class ServiceLocator {
       crmRepository: _crmRepository,
       apiClient: _apiClient,
     );
+    _callEventQueue = CallEventQueue.instance;
+    _crmReportingService = CrmReportingService(
+      crmRepository: _crmRepository,
+      eventQueue: _callEventQueue,
+    );
+    _notificationSyncService = NotificationSyncService(
+      crmRepository: _crmRepository,
+      notificationRepository: _notificationRepository,
+    );
 
     // ============ BLoCs ============
     
-    _loginBloc = LoginBloc();
-    _dialerBloc = DialerBloc(callMethodChannel: _callMethodChannel);
-    _inCallBloc = InCallBloc(callEventChannel: _callEventChannel);
+    _dialerBloc = DialerBloc(_callMethodChannel);
+    _inCallBloc = InCallBloc(
+      _callEventChannel,
+      _callMethodChannel,
+      reportingService: _crmReportingService,
+    );
     _callLogBloc = CallLogBloc(_callLogRepository);
-    _contactsBloc = ContactsBloc();
-    _blockedNumbersBloc = BlockedNumbersBloc();
+    _contactsBloc = ContactsBloc(_contactsMethodChannel);
+    _blockedNumbersBloc = BlockedNumbersBloc(_contactsMethodChannel);
     _admissionCallingBloc = AdmissionCallingBloc();
-    _settingsBloc = SettingsBloc();
-    _homeBloc = HomeBloc();
+    _settingsBloc = SettingsBloc(_callForwardingRepository, _callMethodChannel);
+    _homeBloc = HomeBloc(_callMethodChannel);
+    _notificationsBloc = NotificationsBloc(
+      notificationRepository: _notificationRepository,
+      syncService: _notificationSyncService,
+    );
+    _callSyncBloc = CallSyncBloc(crmRepository: _crmRepository);
   }
 
   /// Get CallMethodChannel
@@ -139,9 +167,6 @@ class ServiceLocator {
   /// Get CallEventLogger
   CallEventLogger get callEventLogger => _callEventLogger;
 
-  /// Get LoginBloc
-  LoginBloc get loginBloc => _loginBloc;
-
   /// Get DialerBloc
   DialerBloc get dialerBloc => _dialerBloc;
 
@@ -166,6 +191,18 @@ class ServiceLocator {
   /// Get HomeBloc
   HomeBloc get homeBloc => _homeBloc;
 
+  /// Get NotificationsBloc
+  NotificationsBloc get notificationsBloc => _notificationsBloc;
+
+  /// Get CallSyncBloc
+  CallSyncBloc get callSyncBloc => _callSyncBloc;
+
+  /// Get NotificationSyncService
+  NotificationSyncService get notificationSyncService => _notificationSyncService;
+
+  /// Get CrmReportingService
+  CrmReportingService get crmReportingService => _crmReportingService;
+
   /// Dispose all BLoCs.
   /// 
   /// Call this in the app's dispose method to clean up resources:
@@ -175,7 +212,6 @@ class ServiceLocator {
   /// }
   /// ```
   Future<void> dispose() async {
-    await _loginBloc.close();
     await _dialerBloc.close();
     await _inCallBloc.close();
     await _callLogBloc.close();
@@ -183,7 +219,8 @@ class ServiceLocator {
     await _blockedNumbersBloc.close();
     await _admissionCallingBloc.close();
     await _settingsBloc.close();
-    await _telegramCallingBloc.close();
     await _homeBloc.close();
+    await _notificationsBloc.close();
+    await _callSyncBloc.close();
   }
 }

@@ -13,6 +13,7 @@ class AdmissionCallingBloc extends Bloc<AdmissionCallingEvent, AdmissionCallingS
     on<AdmissionNumberRemoved>(_onAdmissionNumberRemoved);
     on<AdmissionCallInitiated>(_onAdmissionCallInitiated);
     on<AdmissionCallEnded>(_onAdmissionCallEnded);
+    on<StudentCalled>(_onStudentCalled);
   }
 
   Future<void> _onAdmissionNumberAdded(
@@ -72,5 +73,15 @@ class AdmissionCallingBloc extends Bloc<AdmissionCallingEvent, AdmissionCallingS
     Emitter<AdmissionCallingState> emit,
   ) async {
     emit(const AdmissionCallingIdle());
+  }
+
+  Future<void> _onStudentCalled(
+    StudentCalled event,
+    Emitter<AdmissionCallingState> emit,
+  ) async {
+    // Add student to the calling queue
+    final number = event.studentId; // In practice would look up phone number
+    add(AdmissionNumberAdded(number));
+    add(const AdmissionCallInitiated());
   }
 }

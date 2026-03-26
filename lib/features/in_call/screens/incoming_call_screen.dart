@@ -202,10 +202,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                             CallStateReceived(
                               CallInfo(
                                 callId: widget.callId ?? '',
-                                number: widget.phoneNumber,
+                                callerNumber: widget.phoneNumber,
                                 state: CallState.active,
-                                isOutgoing: false,
-                                duration: Duration.zero,
                               ),
                             ),
                           );

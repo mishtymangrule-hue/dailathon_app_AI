@@ -326,4 +326,101 @@ class CrmRepository {
       rethrow;
     }
   }
+
+  // ============ Notification Scheduling ============
+
+  /// Fetch scheduled notifications for the current employee from the CRM.
+  Future<List<Map<String, dynamic>>> getScheduledNotifications(
+      String employeeId) async {
+    try {
+      final response = await _apiClient.get(
+        '/notifications/scheduled',
+        queryParams: {'employeeId': employeeId},
+      );
+      final list = response['data'] as List? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ============ Call Sync (Part B) ============
+
+  /// Get all degree options.
+  Future<List<Map<String, dynamic>>> getDegrees() async {
+    try {
+      final response = await _apiClient.get('/degrees');
+      final list = response['data'] as List? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get programs for a specific degree.
+  Future<List<Map<String, dynamic>>> getProgramsForDegree(
+      String degreeId) async {
+    try {
+      final response = await _apiClient.get('/degrees/$degreeId/programs');
+      final list = response['data'] as List? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get top-level call response options.
+  Future<List<Map<String, dynamic>>> getResponses() async {
+    try {
+      final response = await _apiClient.get('/call-responses');
+      final list = response['data'] as List? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get sub-responses for a parent response.
+  Future<List<Map<String, dynamic>>> getSubResponses(
+      String responseId) async {
+    try {
+      final response =
+          await _apiClient.get('/call-responses/$responseId/sub');
+      final list = response['data'] as List? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Submit a call sync form to the CRM.
+  Future<void> syncCall(Map<String, dynamic> payload) async {
+    try {
+      await _apiClient.post('/calls/sync', data: payload);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ============ CRM Reporting (Part C) ============
+
+  /// Report call event payload to CRM.
+  Future<void> reportCallEvent(Map<String, dynamic> payload) async {
+    try {
+      await _apiClient.post('/calls/events', data: payload);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get the total number of outbound call attempts to a student.
+  Future<int> getAttemptCount(String studentId) async {
+    try {
+      final response =
+          await _apiClient.get('/students/$studentId/call-attempts');
+      return (response['data']?['count'] as int?) ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
 }

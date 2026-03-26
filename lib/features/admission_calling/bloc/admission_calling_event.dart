@@ -30,3 +30,11 @@ class AdmissionCallInitiated extends AdmissionCallingEvent {
 class AdmissionCallEnded extends AdmissionCallingEvent {
   const AdmissionCallEnded();
 }
+
+class StudentCalled extends AdmissionCallingEvent {
+  const StudentCalled({required this.studentId});
+  final String studentId;
+
+  @override
+  List<Object?> get props => [studentId];
+}

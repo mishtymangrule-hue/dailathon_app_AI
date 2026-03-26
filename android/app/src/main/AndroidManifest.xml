@@ -65,6 +65,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Exact alarm scheduling for CRM notifications -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"
+        android:minSdkVersion="33" />
+
+    <!-- Reschedule alarms after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:name="com.mangrule.dailathon.DialerApplication"
         android:allowBackup="false"
@@ -214,6 +222,23 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.app.action.INTERRUPTION_FILTER_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- CRM scheduled notification alarm receiver -->
+        <receiver
+            android:name="com.mangrule.dailathon.notification.NotificationAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Boot receiver to reschedule alarms after reboot -->
+        <receiver
+            android:name="com.mangrule.dailathon.notification.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

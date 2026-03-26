@@ -213,9 +213,15 @@ class ApiClient {
   }
 
   /// GET request
-  Future<Map<String, dynamic>> get(String endpoint) async {
+  Future<Map<String, dynamic>> get(
+    String endpoint, {
+    Map<String, String>? queryParams,
+  }) async {
     try {
-      final response = await _dio.get(endpoint);
+      final response = await _dio.get(
+        endpoint,
+        queryParameters: queryParams,
+      );
       return _parseResponse(response);
     } on DioException catch (e) {
       throw _handleError(e);

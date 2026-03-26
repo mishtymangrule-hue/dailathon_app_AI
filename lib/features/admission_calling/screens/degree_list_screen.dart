@@ -16,7 +16,7 @@ class DegreeListScreen extends StatelessWidget {
       ),
       body: BlocBuilder<AdmissionCallingBloc, AdmissionCallingState>(
         builder: (context, state) {
-          if (state is AdmissionLoading) {
+          if (state is AdmissionCallingIdle) {
             return const Center(child: CircularProgressIndicator());
           }
 

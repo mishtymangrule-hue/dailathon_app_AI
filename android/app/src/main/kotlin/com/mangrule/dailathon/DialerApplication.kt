@@ -1,12 +1,23 @@
 package com.mangrule.dailathon
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.mangrule.dailathon.notification.NotificationAlarmReceiver
+import com.mangrule.dailathon.telecom.PhoneAccountManager
+import com.mangrule.dailathon.worker.CrmFlushWorker
 import dagger.hilt.android.HiltAndroidApp
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import com.mangrule.dailathon.telecom.PhoneAccountManager
 
 @HiltAndroidApp
 class DialerApplication : Application() {
@@ -25,6 +36,9 @@ class DialerApplication : Application() {
             Timber.plant(ReleaseTree())
         }
 
+        // Create all notification channels
+        createAllNotificationChannels()
+
         // Initialize Flutter engine
         initializeFlutterEngine()
 
@@ -36,7 +50,45 @@ class DialerApplication : Application() {
             Timber.e(e, "Error registering PhoneAccounts")
         }
 
+        // Register periodic CRM flush worker
+        registerCrmFlushWorker()
+
         Timber.d("DialerApplication initialized successfully")
+    }
+
+    private fun createAllNotificationChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        // CRM scheduled reminders
+        val crmChannel = NotificationChannel(
+            NotificationAlarmReceiver.CHANNEL_ID,
+            "CRM Reminders",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = "Scheduled call reminders from your CRM"
+            enableVibration(true)
+        }
+
+        manager.createNotificationChannels(listOf(crmChannel))
+        Timber.d("DialerApplication: notification channels created")
+    }
+
+    private fun registerCrmFlushWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val request = PeriodicWorkRequestBuilder<CrmFlushWorker>(
+            15, TimeUnit.MINUTES,
+        )
+            .setConstraints(constraints)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            CrmFlushWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request,
+        )
+        Timber.d("DialerApplication: CRM flush worker registered")
     }
 
     private fun initializeFlutterEngine() {

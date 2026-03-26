@@ -19,6 +19,15 @@ class CallLogFiltered extends CallLogEvent {
   List<Object?> get props => [phoneNumber];
 }
 
+class CallLogTypeFiltered extends CallLogEvent {
+  const CallLogTypeFiltered(this.type);
+  /// 'all' | 'missed' | 'outgoing' | 'incoming'
+  final String type;
+
+  @override
+  List<Object?> get props => [type];
+}
+
 class CallLogEntryDeleted extends CallLogEvent {
   const CallLogEntryDeleted(this.entryId);
   final String entryId;

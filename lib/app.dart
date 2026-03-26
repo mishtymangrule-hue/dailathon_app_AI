@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/permissions/permission_manager.dart';
 import 'presentation/blocs.dart';
 import 'core/service_locator.dart';
+import 'features/home/bloc/home_bloc.dart';
+import 'features/notifications/bloc/notifications_bloc.dart';
+import 'features/call_sync/bloc/call_sync_bloc.dart';
 import 'router.dart';
 
 class DialerApp extends StatefulWidget {
@@ -29,10 +31,6 @@ class _DialerAppState extends State<DialerApp> {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<LoginBloc>(
-            create: (context) => ServiceLocator().loginBloc
-              ..add(const SessionRestored(token: '')),
-          ),
           BlocProvider<DialerBloc>(
             create: (context) => ServiceLocator().dialerBloc,
           ),
@@ -57,6 +55,13 @@ class _DialerAppState extends State<DialerApp> {
           BlocProvider<HomeBloc>(
             create: (context) => ServiceLocator().homeBloc,
           ),
+          BlocProvider<NotificationsBloc>(
+            create: (context) => ServiceLocator().notificationsBloc
+              ..add(const NotificationsRefreshRequested()),
+          ),
+          BlocProvider<CallSyncBloc>(
+            create: (context) => ServiceLocator().callSyncBloc,
+          ),
         ],
         child: MaterialApp.router(
           title: 'Dailathon Dialer',
@@ -65,22 +70,9 @@ class _DialerAppState extends State<DialerApp> {
             primarySwatch: Colors.blue,
             useMaterial3: true,
           ),
-          routerConfig: GoRouter(
-            initialLocation: _resolveInitialRoute(context),
-            routes: router.routes,
-          ),
+          routerConfig: router,
         ),
       ),
     );
-
-  /// Determine initial route based on login state
-  String _resolveInitialRoute(BuildContext context) {
-    final loginState = context.read<LoginBloc>().state;
-    
-    if (loginState is LoginSuccess) {
-      return '/home';
-    } else {
-      return '/login';
-    }
   }
 }

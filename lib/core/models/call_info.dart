@@ -50,6 +50,7 @@ class CallInfo extends Equatable {
     this.simSlot = 0,
     this.disconnectCause,
     this.callType = 'normal',  // 'normal', 'call_waiting', 'conference'
+    this.callerCrmStatus,
   });
 
   final String callId;
@@ -69,6 +70,22 @@ class CallInfo extends Equatable {
   final String? disconnectCause;
   final String callType;
 
+  /// CRM lookup status: null = not yet checked, 'known' = found in CRM,
+  /// 'unknown' = not found (show sync banner).
+  final String? callerCrmStatus;
+
+  /// Alias for [callerNumber] for backwards compatibility.
+  String get number => callerNumber;
+
+  /// Alias for [isSpeakerOn].
+  bool get isSpeakerEnabled => isSpeakerOn;
+
+  /// Alias for [isBluetoothActive].
+  bool get isBluetoothAudio => isBluetoothActive;
+
+  /// Alias for [isOnHold].
+  bool get isHeld => isOnHold;
+
   @override
   List<Object?> get props => [
         callId,
@@ -87,6 +104,7 @@ class CallInfo extends Equatable {
         simSlot,
         disconnectCause,
         callType,
+        callerCrmStatus,
       ];
 }
 

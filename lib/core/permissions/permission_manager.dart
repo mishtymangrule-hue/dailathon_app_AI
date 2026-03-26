@@ -10,7 +10,6 @@ class PermissionManager {
     final permissions = <Permission>[
       Permission.phone,
       Permission.contacts,
-      Permission.callLog,
       if (await _isApi33OrAbove()) Permission.notification,
     ];
 
@@ -130,8 +129,6 @@ class PermissionManager {
         return 'Phone permission is required to make and manage calls.';
       case Permission.contacts:
         return 'Contacts permission is required to access your contact list.';
-      case Permission.callLog:
-        return 'Call log permission is required to access your call history.';
       case Permission.notification:
         return 'Notification permission is required to alert you of incoming calls.';
       default:

@@ -32,7 +32,7 @@ class CallWaitingBanner extends StatelessWidget {
           // Header
           Row(
             children: [
-              const Icon(Icons.phone_incoming,
+              const Icon(Icons.call,
                   color: Colors.orange, size: 24),
               const SizedBox(width: 12),
               Expanded(

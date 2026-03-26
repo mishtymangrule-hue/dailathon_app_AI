@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
 import 'package:dailathon_dialer/features/in_call/widgets/call_waiting_banner.dart';
+import 'package:dailathon_dialer/features/call_sync/screens/call_sync_form_sheet.dart';
 import 'package:dailathon_dialer/core/models/call_info.dart';
 
 /// Active call screen displayed during ongoing calls.
@@ -71,6 +72,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                           );
                     },
                   ),
+
+                // Unknown caller banner
+                if (widget.callInfo.callerCrmStatus == 'unknown')
+                  _UnknownCallerBanner(callInfo: widget.callInfo),
 
                 // Header with elapsed time and close
                 Padding(
@@ -394,4 +399,40 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     final number = widget.callInfo.number;
     return number.isNotEmpty ? number[0].toUpperCase() : '?';
   }
+}
+
+/// Banner shown when the caller is not found in the CRM.
+class _UnknownCallerBanner extends StatelessWidget {
+  const _UnknownCallerBanner({required this.callInfo});
+
+  final CallInfo callInfo;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        color: Colors.orange.shade800,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.person_off, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Unknown caller — not in CRM',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: () => CallSyncFormSheet.show(
+                context,
+                callId: callInfo.callId,
+                phoneNumber: callInfo.callerNumber,
+              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: const Text('Sync'),
+            ),
+          ],
+        ),
+      );
 }

@@ -35,6 +35,13 @@ class _DialerScreenState extends State<DialerScreen> {
       ),
       body: BlocBuilder<DialerBloc, DialerState>(
         builder: (context, state) {
+          if (state is DialerCalling) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is DialerError) {
+            return Center(child: Text('Error: ${state.error}'));
+          }
+          final activeState = state is DialerActive ? state : const DialerActive();
           return Column(
             children: [
               // Number Display Box
@@ -45,7 +52,7 @@ class _DialerScreenState extends State<DialerScreen> {
                   children: [
                     // Current Number
                     SelectableText(
-                      state.currentNumber.isEmpty ? '0' : state.currentNumber,
+                      activeState.currentNumber.isEmpty ? '0' : activeState.currentNumber,
                       style: Theme.of(context).textTheme.displayMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2,
@@ -54,23 +61,23 @@ class _DialerScreenState extends State<DialerScreen> {
                     ),
                     const SizedBox(height: 12),
                     // SIM Selector (multi-SIM only)
-                    if (state.availableSims.length > 1)
+                    if (activeState.availableSims.length > 1)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
-                            state.availableSims.length,
+                            activeState.availableSims.length,
                             (index) => Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 4.0),
                               child: FilterChip(
                                 label: Text('SIM ${index + 1}'),
                                 selected:
-                                    state.selectedSimSlot == index,
+                                    activeState.selectedSimSlot == index,
                                 onSelected: (selected) {
                                   context.read<DialerBloc>().add(
-                                        SimSelected(slot: index),
+                                        SimSlotSelected(index),
                                       );
                                 },
                               ),
@@ -83,7 +90,7 @@ class _DialerScreenState extends State<DialerScreen> {
               ),
               const SizedBox(height: 16),
               // T9 Search Suggestions
-              if (state.contactSuggestions.isNotEmpty)
+              if (activeState.contactSuggestions.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Column(
@@ -100,9 +107,9 @@ class _DialerScreenState extends State<DialerScreen> {
                       SizedBox(
                         height: 100,
                         child: ListView.builder(
-                          itemCount: state.contactSuggestions.length,
+                          itemCount: activeState.contactSuggestions.length,
                           itemBuilder: (context, index) {
-                            final contact = state.contactSuggestions[index];
+                            final contact = activeState.contactSuggestions[index];
                             return ListTile(
                               dense: true,
                               leading: CircleAvatar(
@@ -136,7 +143,7 @@ class _DialerScreenState extends State<DialerScreen> {
                       
                       context.read<DialerBloc>().add(
                             NumberChanged(
-                              number: state.currentNumber + digit,
+                              number: activeState.currentNumber + digit,
                             ),
                           );
                     },
@@ -146,9 +153,9 @@ class _DialerScreenState extends State<DialerScreen> {
                       
                       context.read<DialerBloc>().add(
                             NumberChanged(
-                              number: state.currentNumber.isNotEmpty
-                                  ? state.currentNumber
-                                      .substring(0, state.currentNumber.length - 1)
+                              number: activeState.currentNumber.isNotEmpty
+                                  ? activeState.currentNumber
+                                      .substring(0, activeState.currentNumber.length - 1)
                                   : '',
                             ),
                           );
@@ -168,19 +175,19 @@ class _DialerScreenState extends State<DialerScreen> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FloatingActionButton.extended(
-                  onPressed: state.currentNumber.isEmpty
+                  onPressed: activeState.currentNumber.isEmpty
                       ? null
                       : () {
                           context.read<DialerBloc>().add(
                                 CallInitiated(
-                                  number: state.currentNumber,
-                                  simSlot: state.selectedSimSlot,
+                                  number: activeState.currentNumber,
+                                  simSlot: activeState.selectedSimSlot,
                                 ),
                               );
                         },
                   icon: const Icon(Icons.call),
                   label: const Text('Call'),
-                  backgroundColor: state.currentNumber.isEmpty
+                  backgroundColor: activeState.currentNumber.isEmpty
                       ? Colors.grey
                       : Colors.green,
                 ),

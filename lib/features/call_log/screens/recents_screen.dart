@@ -30,7 +30,7 @@ class _RecentsScreenState extends State<RecentsScreen>
 
   void _onTabChanged() {
     final filterType = _getFilterType(_tabController.index);
-    context.read<CallLogBloc>().add(FilterChanged(filter: filterType));
+    context.read<CallLogBloc>().add(CallLogTypeFiltered(filterType));
   }
 
   String _getFilterType(int index) {
@@ -69,7 +69,7 @@ class _RecentsScreenState extends State<RecentsScreen>
           }
 
           if (state is CallLogLoaded) {
-            final callLog = state.callLog;
+            final callLog = state.entries;
 
             if (callLog.isEmpty) {
               return Center(
@@ -101,7 +101,7 @@ class _RecentsScreenState extends State<RecentsScreen>
                   entry: entry,
                   onDelete: () {
                     context.read<CallLogBloc>().add(
-                          EntryDeleted(id: entry.id),
+                          CallLogEntryDeleted(entry.id),
                         );
                   },
                   onBlock: () {

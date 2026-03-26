@@ -28,7 +28,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   void _onSearchChanged() {
     context.read<ContactsBloc>().add(
-          SearchQueryChanged(query: _searchController.text),
+          ContactSearched(_searchController.text),
         );
   }
 

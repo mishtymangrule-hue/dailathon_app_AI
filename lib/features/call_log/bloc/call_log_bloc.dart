@@ -11,6 +11,7 @@ class CallLogBloc extends Bloc<CallLogEvent, CallLogState> {
   CallLogBloc(this._callLogRepository) : super(const CallLogLoading()) {
     on<CallLogRequested>(_onCallLogRequested);
     on<CallLogFiltered>(_onCallLogFiltered);
+    on<CallLogTypeFiltered>(_onCallLogTypeFiltered);
     on<CallLogEntryDeleted>(_onCallLogEntryDeleted);
     on<CallLogCleared>(_onCallLogCleared);
   }
@@ -42,6 +43,27 @@ class CallLogBloc extends Bloc<CallLogEvent, CallLogState> {
       } else {
         // Filter by phone number
         final filtered = await _callLogRepository.getCallsWithNumber(event.phoneNumber);
+        emit(CallLogLoaded(entries: filtered));
+      }
+    } catch (e) {
+      emit(CallLogError(error: e.toString()));
+    }
+  }
+
+  Future<void> _onCallLogTypeFiltered(
+    CallLogTypeFiltered event,
+    Emitter<CallLogState> emit,
+  ) async {
+    try {
+      final all = await _callLogRepository.getCallLog();
+      if (event.type == 'all') {
+        emit(CallLogLoaded(entries: all));
+      } else {
+        final typeMap = {'missed': 3, 'outgoing': 2, 'incoming': 1};
+        final typeCode = typeMap[event.type];
+        final filtered = typeCode == null
+            ? all
+            : all.where((e) => e.type == typeCode).toList();
         emit(CallLogLoaded(entries: filtered));
       }
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:dailathon_dialer/core/channels/call_event_channel.dart';
 import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/models/call_info.dart';
 import 'package:dailathon_dialer/core/models/multi_call_state.dart';
+import 'package:dailathon_dialer/core/services/crm_reporting_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -15,8 +16,10 @@ part 'in_call_state.dart';
 class InCallBloc extends Bloc<InCallEvent, InCallState> {
   InCallBloc(
     this._callEventChannel,
-    this._callMethodChannel,
-  ) : super(const InCallIdle()) {
+    this._callMethodChannel, {
+    CrmReportingService? reportingService,
+  })  : _reportingService = reportingService,
+        super(const InCallIdle()) {
     on<CallStateReceived>(_onCallStateReceived);
     on<MultiCallStateReceived>(_onMultiCallStateReceived);
     on<MuteToggled>(_onMuteToggled);
@@ -37,7 +40,12 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
 
   final CallEventChannel _callEventChannel;
   final CallMethodChannel _callMethodChannel;
+  final CrmReportingService? _reportingService;
   late StreamSubscription<MultiCallState> _callEventSubscription;
+
+  // Track call timing for CRM reporting
+  DateTime? _callStartedAt;
+  DateTime? _ringingStartedAt;
 
   void _startListeningToCallEvents() {
     _callEventSubscription = _callEventChannel.multiCallStateStream.listen(
@@ -52,7 +60,15 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
     CallStateReceived event,
     Emitter<InCallState> emit,
   ) async {
+    // Record ringing start time on first event
+    _ringingStartedAt ??= DateTime.now();
+
+    if (event.callInfo.state == CallState.active) {
+      _callStartedAt ??= DateTime.now();
+    }
+
     if (event.callInfo.state == CallState.ended) {
+      await _reportEndedCall(event.callInfo);
       emit(InCallEnded(cause: event.callInfo.disconnectCause));
     } else {
       emit(InCallActive(callInfo: event.callInfo));
@@ -216,7 +232,41 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
     CallEnded event,
     Emitter<InCallState> emit,
   ) async {
+    // Derive callInfo from current state for reporting
+    if (state is InCallActive) {
+      final callInfo = (state as InCallActive).callInfo;
+      await _reportEndedCall(callInfo, cause: event.cause);
+    }
     emit(InCallEnded(cause: event.cause));
+  }
+
+  Future<void> _reportEndedCall(CallInfo callInfo, {String? cause}) async {
+    if (_reportingService == null) return;
+    final now = DateTime.now();
+    final start = _ringingStartedAt ?? now;
+    final activeStart = _callStartedAt ?? now;
+    final ringing = activeStart.difference(start).inSeconds;
+    final active = now.difference(activeStart).inSeconds;
+
+    final status = (active > 0) ? 'completed'
+        : (cause?.toLowerCase().contains('reject') == true) ? 'declined'
+        : 'missed';
+
+    await _reportingService?.reportCallEnd({
+      'callId': callInfo.callId,
+      'phoneNumber': callInfo.callerNumber,
+      'direction': 'outbound',
+      'status': status,
+      'startedAt': start,
+      'endedAt': now,
+      'ringingDurationSeconds': ringing.clamp(0, 3600),
+      'activeDurationSeconds': active.clamp(0, 86400),
+      'simSlot': callInfo.simSlot,
+    });
+
+    // Reset timers
+    _ringingStartedAt = null;
+    _callStartedAt = null;
   }
 
   @override

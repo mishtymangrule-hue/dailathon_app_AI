@@ -18,6 +18,7 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     on<CallInitiated>(_onCallInitiated);
     on<SimSlotSelected>(_onSimSlotSelected);
     on<T9SearchPerformed>(_onT9SearchPerformed);
+    on<NumberChanged>(_onNumberChanged);
   }
 
   final CallMethodChannel _callMethodChannel;
@@ -27,17 +28,17 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     Emitter<DialerState> emit,
   ) async {
     if (state is! DialerActive) {
-      emit(const DialerActive(number: ''));
+      emit(const DialerActive(currentNumber: ''));
     }
 
     final currentState = state as DialerActive;
-    final newNumber = currentState.number + event.digit;
+    final newNumber = currentState.currentNumber + event.digit;
 
     emit(
       DialerActive(
-        number: newNumber,
+        currentNumber: newNumber,
         selectedSimSlot: currentState.selectedSimSlot,
-        suggestions: const [], // TODO: Perform T9 search
+        contactSuggestions: const [], // TODO: Perform T9 search
       ),
     );
   }
@@ -49,12 +50,12 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     if (state is! DialerActive) return;
 
     final currentState = state as DialerActive;
-    if (currentState.number.isEmpty) return;
+    if (currentState.currentNumber.isEmpty) return;
 
-    final newNumber = currentState.number.substring(0, currentState.number.length - 1);
+    final newNumber = currentState.currentNumber.substring(0, currentState.currentNumber.length - 1);
     emit(
       DialerActive(
-        number: newNumber,
+        currentNumber: newNumber,
         selectedSimSlot: currentState.selectedSimSlot,
       ),
     );
@@ -77,13 +78,13 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     if (state is! DialerActive) return;
 
     final currentState = state as DialerActive;
-    if (currentState.number.isEmpty) return;
+    if (currentState.currentNumber.isEmpty) return;
 
     emit(const DialerCalling());
 
     try {
       await _callMethodChannel.dial(
-        currentState.number,
+        currentState.currentNumber,
         simSlot: currentState.selectedSimSlot,
       );
     } catch (e) {
@@ -102,7 +103,7 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     final currentState = state as DialerActive;
     emit(
       DialerActive(
-        number: currentState.number,
+        currentNumber: currentState.currentNumber,
         selectedSimSlot: event.simSlot,
       ),
     );
@@ -119,9 +120,22 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     // TODO: Perform actual T9 search via ContactsRepository
     emit(
       DialerActive(
-        number: currentState.number,
+        currentNumber: currentState.currentNumber,
         selectedSimSlot: currentState.selectedSimSlot,
-        suggestions: event.suggestions,
+        contactSuggestions: event.suggestions,
+      ),
+    );
+  }
+
+  Future<void> _onNumberChanged(
+    NumberChanged event,
+    Emitter<DialerState> emit,
+  ) async {
+    final currentState = state is DialerActive ? state as DialerActive : const DialerActive();
+    emit(
+      DialerActive(
+        currentNumber: event.number,
+        selectedSimSlot: currentState.selectedSimSlot,
       ),
     );
   }
