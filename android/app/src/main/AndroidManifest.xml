@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Device features -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
+    <!-- Core telephony permissions -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+
+    <!-- Contacts permissions -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+    <!-- Call screening and blocking (API 24+) -->
+    <uses-permission android:name="android.permission.READ_BLOCKED_NUMBERS" />
+    <uses-permission android:name="android.permission.WRITE_BLOCKED_NUMBERS" />
+
+    <!-- Notifications -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Audio and vibration -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Bluetooth (API-dependent) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        android:minSdkVersion="31" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:minSdkVersion="31"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Wake lock for screen keep-alive during calls -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Emergency call privilege (system apps only, harmless to declare) -->
+    <uses-permission
+        android:name="android.permission.CALL_PRIVILEGED"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"
+        android:minSdkVersion="34" />
+
+    <!-- Multi-SIM -->
+    <uses-permission android:name="android.permission.READ_PRECISE_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+
+    <!-- Internet (for API calls) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:name="com.mangrule.dailathon.DialerApplication"
+        android:allowBackup="false"
+        android:debuggable="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.DialerApp"
+        android:usesCleartextTraffic="false">
+
+        <!-- MainActivity (entry point) -->
+        <activity
+            android:name="com.mangrule.dailathon.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.DialerApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Dialer intent support -->
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tel" />
+            </intent-filter>
+
+            <!-- View tel: URIs -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tel" />
+            </intent-filter>
+
+            <!-- Call intent support -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+        </activity>
+
+        <!-- Incoming call activity (lock screen UI) -->
+        <activity
+            android:name="com.mangrule.dailathon.presentation.activities.IncomingCallActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true" />
+
+        <!-- ConnectionService (PSTN call provider) -->
+        <service
+            android:name="com.mangrule.dailathon.telecom.DialerConnectionService"
+            android:exported="true"
+            android:foregroundServiceType="phoneCall"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
+
+        <!-- InCallService (active call UI controller) -->
+        <service
+            android:name="com.mangrule.dailathon.telecom.DialerInCallService"
+            android:exported="true"
+            android:foregroundServiceType="phoneCall|microphone"
+            android:permission="android.permission.BIND_INCALL_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.InCallService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.telecom.IN_CALL_SERVICE_UI"
+                android:value="true" />
+        </service>
+
+        <!-- Call screening service (spam/blocking detection) -->
+        <service
+            android:name="com.mangrule.dailathon.telecom.DialerCallScreeningService"
+            android:exported="true"
+            android:permission="android.permission.BIND_CALL_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
+        <!-- Broadcast receivers for call state changes -->
+        <receiver
+            android:name="com.mangrule.dailathon.presentation.notification.CallNotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mangrule.dailathon.ACTION_MUTE" />
+                <action android:name="com.mangrule.dailathon.ACTION_HANGUP" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.mangrule.dailathon.notification.IncomingCallReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name="com.mangrule.dailathon.notification.AnswerCallReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name="com.mangrule.dailathon.notification.DeclineCallReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name="com.mangrule.dailathon.notification.MuteCallReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name="com.mangrule.dailathon.notification.HangUpCallReceiver"
+            android:enabled="true"
+            android:exported="true" />
+        <receiver
+            android:name="com.mangrule.dailathon.audio.HeadsetReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.HEADSET_PLUG" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.mangrule.dailathon.audio.BluetoothAudioReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.action.SCO_AUDIO_STATE_UPDATED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- DND interruption filter changes -->
+        <receiver
+            android:name="com.mangrule.dailathon.vibration.DndReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.app.action.INTERRUPTION_FILTER_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>
