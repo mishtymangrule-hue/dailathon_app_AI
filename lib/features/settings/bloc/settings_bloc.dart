@@ -17,6 +17,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<EnableForwardingRequested>(_onEnableForwardingRequested);
     on<DisableForwardingRequested>(_onDisableForwardingRequested);
     on<SetDefaultDialerRequested>(_onSetDefaultDialerRequested);
+    on<CallWaitingToggled>(_onCallWaitingToggled);
+    on<PowerButtonEndCallToggled>(_onPowerButtonEndCallToggled);
+    on<VolumeButtonBehaviorChanged>(_onVolumeButtonBehaviorChanged);
   }
 
   // ignore: unused_field
@@ -208,6 +211,57 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         );
       default:
         return currentState;
+    }
+  }
+
+  SettingsLoaded _copyWithExtra(
+    SettingsLoaded s, {
+    bool? callWaitingEnabled,
+    bool? powerButtonEndCall,
+    String? volumeButtonBehavior,
+  }) =>
+      SettingsLoaded(
+        unconditionalForwarding: s.unconditionalForwarding,
+        busyForwarding: s.busyForwarding,
+        noAnswerForwarding: s.noAnswerForwarding,
+        unreachableForwarding: s.unreachableForwarding,
+        unconditionalEnabled: s.unconditionalEnabled,
+        busyEnabled: s.busyEnabled,
+        noAnswerEnabled: s.noAnswerEnabled,
+        unreachableEnabled: s.unreachableEnabled,
+        isDefaultDialer: s.isDefaultDialer,
+        callWaitingEnabled: callWaitingEnabled ?? s.callWaitingEnabled,
+        powerButtonEndCall: powerButtonEndCall ?? s.powerButtonEndCall,
+        volumeButtonBehavior: volumeButtonBehavior ?? s.volumeButtonBehavior,
+      );
+
+  void _onCallWaitingToggled(
+    CallWaitingToggled event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      emit(_copyWithExtra(s, callWaitingEnabled: event.enabled));
+    }
+  }
+
+  void _onPowerButtonEndCallToggled(
+    PowerButtonEndCallToggled event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      emit(_copyWithExtra(s, powerButtonEndCall: event.enabled));
+    }
+  }
+
+  void _onVolumeButtonBehaviorChanged(
+    VolumeButtonBehaviorChanged event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      emit(_copyWithExtra(s, volumeButtonBehavior: event.behavior));
     }
   }
 }

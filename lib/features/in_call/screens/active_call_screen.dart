@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
 import 'package:dailathon_dialer/features/in_call/widgets/call_waiting_banner.dart';
 import 'package:dailathon_dialer/features/call_sync/screens/call_sync_form_sheet.dart';
@@ -45,6 +46,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   Widget build(BuildContext context) => BlocBuilder<InCallBloc, InCallState>(
       builder: (context, state) {
         final hasWaitingCall = state is InCallActive && state.hasCallWaiting;
+        // Use live state from BLoC, fallback to initial widget.callInfo
+        final callInfo = state is InCallActive
+            ? state.callInfo
+            : widget.callInfo;
         
         return Scaffold(
           backgroundColor: Colors.black,
@@ -73,8 +78,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                   ),
 
                 // Unknown caller banner
-                if (widget.callInfo.callerCrmStatus == 'unknown')
-                  _UnknownCallerBanner(callInfo: widget.callInfo),
+                if (callInfo.callerCrmStatus == 'unknown')
+                  _UnknownCallerBanner(callInfo: callInfo),
 
                 // Header with elapsed time and close
                 Padding(
@@ -132,7 +137,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          widget.callInfo.number,
+                          callInfo.number,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -164,30 +169,30 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                           _buildControlButton(
                             icon: Icons.mic_off,
                             label: 'Mute',
-                            isActive: widget.callInfo.isMuted,
+                            isActive: callInfo.isMuted,
                             onPressed: () {
                               context.read<InCallBloc>().add(
-                                    MuteToggled(widget.callInfo.isMuted),
+                                    MuteToggled(callInfo.isMuted),
                                   );
                             },
                           ),
                           _buildControlButton(
                             icon: Icons.volume_up,
                             label: 'Speaker',
-                            isActive: widget.callInfo.isSpeakerEnabled,
+                            isActive: callInfo.isSpeakerEnabled,
                             onPressed: () {
                               context.read<InCallBloc>().add(
-                                    SpeakerToggled(widget.callInfo.isSpeakerEnabled),
+                                    SpeakerToggled(callInfo.isSpeakerEnabled),
                                   );
                             },
                           ),
                           _buildControlButton(
                             icon: Icons.bluetooth_audio,
                             label: 'BT',
-                            isActive: widget.callInfo.isBluetoothAudio,
+                            isActive: callInfo.isBluetoothAudio,
                             onPressed: () {
                               context.read<InCallBloc>().add(
-                                    BluetoothToggled(widget.callInfo.isBluetoothAudio),
+                                    BluetoothToggled(callInfo.isBluetoothAudio),
                                   );
                             },
                           ),
@@ -202,11 +207,11 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                         children: [
                           _buildControlButton(
                             icon: Icons.pause_circle,
-                            label: widget.callInfo.isHeld ? 'Resume' : 'Hold',
-                            isActive: widget.callInfo.isHeld,
+                            label: callInfo.isHeld ? 'Resume' : 'Hold',
+                            isActive: callInfo.isHeld,
                             onPressed: () {
                               context.read<InCallBloc>().add(
-                                    HoldToggled(widget.callInfo.isHeld),
+                                    HoldToggled(callInfo.isHeld),
                                   );
                             },
                           ),
@@ -223,7 +228,14 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                             label: 'Add Call',
                             isActive: false,
                             onPressed: () {
-                              // TODO: Add call functionality
+                              // Put current call on hold first
+                              if (!callInfo.isHeld) {
+                                context.read<InCallBloc>().add(
+                                      HoldToggled(callInfo.isHeld),
+                                    );
+                              }
+                              // Navigate to dialer to make second call
+                              context.go('/dialer');
                             },
                           ),
                         ],
@@ -274,7 +286,14 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                   child: FloatingActionButton.extended(
                     onPressed: () {
                       context.read<InCallBloc>().add(const CallEnded());
-                      Navigator.of(context).pop();
+                      // Show call sync form for post-call notes
+                      CallSyncFormSheet.show(
+                        context,
+                        callId: callInfo.callId,
+                        phoneNumber: callInfo.number,
+                      ).then((_) {
+                        if (context.mounted) Navigator.of(context).pop();
+                      });
                     },
                     backgroundColor: Colors.red,
                     icon: const Icon(Icons.call_end),

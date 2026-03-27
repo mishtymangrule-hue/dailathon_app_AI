@@ -2,6 +2,7 @@ import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/models/contact.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 
 part 'dialer_event.dart';
 part 'dialer_state.dart';
@@ -11,6 +12,7 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
   DialerBloc(
     this._callMethodChannel,
   ) : super(const DialerInitial()) {
+    on<DialerStarted>(_onDialerStarted);
     on<NumberInput>(_onNumberInput);
     on<BackspacePressed>(_onBackspacePressed);
     on<ClearPressed>(_onClearPressed);
@@ -21,6 +23,18 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
   }
 
   final CallMethodChannel _callMethodChannel;
+
+  Future<void> _onDialerStarted(
+    DialerStarted event,
+    Emitter<DialerState> emit,
+  ) async {
+    try {
+      final sims = await _callMethodChannel.getSimSlots();
+      emit(DialerActive(availableSims: sims));
+    } catch (_) {
+      emit(const DialerActive());
+    }
+  }
 
   Future<void> _onNumberInput(
     NumberInput event,
@@ -33,11 +47,14 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     final currentState = state as DialerActive;
     final newNumber = currentState.currentNumber + event.digit;
 
+    // Perform T9 search
+    final suggestions = await _searchContacts(newNumber);
+
     emit(
       DialerActive(
         currentNumber: newNumber,
         selectedSimSlot: currentState.selectedSimSlot,
-        contactSuggestions: const [], // TODO: Perform T9 search
+        contactSuggestions: suggestions,
       ),
     );
   }
@@ -122,12 +139,12 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
 
     final currentState = state as DialerActive;
 
-    // TODO: Perform actual T9 search via ContactsRepository
+    final suggestions = await _searchContacts(currentState.currentNumber);
     emit(
       DialerActive(
         currentNumber: currentState.currentNumber,
         selectedSimSlot: currentState.selectedSimSlot,
-        contactSuggestions: event.suggestions,
+        contactSuggestions: suggestions,
       ),
     );
   }
@@ -137,11 +154,54 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     Emitter<DialerState> emit,
   ) async {
     final selectedSim = state is DialerActive ? (state as DialerActive).selectedSimSlot : 0;
+    final suggestions = event.number.length >= 2 ? await _searchContacts(event.number) : <Contact>[];
     emit(
       DialerActive(
         currentNumber: event.number,
         selectedSimSlot: selectedSim,
+        contactSuggestions: suggestions,
       ),
     );
+  }
+
+  /// T9 search: match digits against contact names and numbers
+  Future<List<Contact>> _searchContacts(String digits) async {
+    if (digits.isEmpty) return [];
+    try {
+      final contacts = await fc.FlutterContacts.getContacts(withProperties: true, withPhoto: false);
+      final results = <Contact>[];
+      for (final c in contacts) {
+        if (results.length >= 5) break;
+        // Match against phone numbers
+        final numberMatch = c.phones.any((p) => p.number.replaceAll(RegExp(r'[^\d]'), '').contains(digits));
+        // Match against T9 name mapping
+        final nameDigits = _nameToT9(c.displayName);
+        final nameMatch = nameDigits.contains(digits);
+        if (numberMatch || nameMatch) {
+          results.add(Contact(
+            id: c.id,
+            name: c.displayName,
+            phoneNumber: c.phones.isNotEmpty ? c.phones.first.number : '',
+          ));
+        }
+      }
+      return results;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static String _nameToT9(String name) {
+    const t9Map = {
+      'a': '2', 'b': '2', 'c': '2',
+      'd': '3', 'e': '3', 'f': '3',
+      'g': '4', 'h': '4', 'i': '4',
+      'j': '5', 'k': '5', 'l': '5',
+      'm': '6', 'n': '6', 'o': '6',
+      'p': '7', 'q': '7', 'r': '7', 's': '7',
+      't': '8', 'u': '8', 'v': '8',
+      'w': '9', 'x': '9', 'y': '9', 'z': '9',
+    };
+    return name.toLowerCase().split('').map((c) => t9Map[c] ?? '').join();
   }
 }

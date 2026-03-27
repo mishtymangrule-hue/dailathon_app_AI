@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
+import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/models/call_info.dart';
+import 'package:dailathon_dialer/core/service_locator.dart';
 
 /// Full-screen incoming call UI for the Flutter layer.
 /// Displayed when incoming call notification is tapped or during active calls.
@@ -26,6 +28,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   late Animation<double> _pulseAnimation;
   Duration _elapsedDuration = Duration.zero;
   late DateTime _callStartTime;
+  double _swipeDx = 0;
+  static const double _swipeThreshold = 100;
 
   @override
   void initState() {
@@ -169,6 +173,44 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               ),
             ),
 
+            // Swipe to answer/decline area
+            GestureDetector(
+              onHorizontalDragUpdate: (details) {
+                setState(() => _swipeDx += details.delta.dx);
+              },
+              onHorizontalDragEnd: (details) {
+                if (_swipeDx > _swipeThreshold) {
+                  // Swipe right → Answer via native
+                  _answerCall();
+                } else if (_swipeDx < -_swipeThreshold) {
+                  // Swipe left → Decline via native
+                  _declineCall();
+                }
+                setState(() => _swipeDx = 0);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.call_end, color: Colors.red.shade300, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      '← Decline    Swipe    Answer →',
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.call, color: Colors.green.shade300, size: 20),
+                  ],
+                ),
+              ),
+            ),
+
             // Action buttons
             Padding(
               padding: const EdgeInsets.all(24),
@@ -180,12 +222,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     icon: Icons.call_end,
                     label: 'Decline',
                     color: Colors.red,
-                    onPressed: () {
-                      context.read<InCallBloc>().add(
-                            const CallEnded(cause: 'declined'),
-                          );
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: _declineCall,
                   ),
 
                   const SizedBox(width: 32),
@@ -195,18 +232,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     icon: Icons.call,
                     label: 'Answer',
                     color: Colors.green,
-                    onPressed: () {
-                      // Answer via CallMethodChannel
-                      context.read<InCallBloc>().add(
-                            CallStateReceived(
-                              CallInfo(
-                                callId: widget.callId ?? '',
-                                callerNumber: widget.phoneNumber,
-                                state: CallState.active,
-                              ),
-                            ),
-                          );
-                    },
+                    onPressed: _answerCall,
                   ),
                 ],
               ),
@@ -261,5 +287,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   String _getInitials() {
     final name = widget.displayName ?? widget.phoneNumber;
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  void _answerCall() {
+    ServiceLocator().callMethodChannel.answer();
+  }
+
+  void _declineCall() {
+    ServiceLocator().callMethodChannel.rejectCall();
+    if (mounted) Navigator.of(context).pop();
   }
 }

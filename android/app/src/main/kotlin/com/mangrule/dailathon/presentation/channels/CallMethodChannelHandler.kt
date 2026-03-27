@@ -1,10 +1,12 @@
 package com.mangrule.dailathon.presentation.channels
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.BlockedNumberContract
 import android.telecom.TelecomManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.flutter.embedding.engine.FlutterEngine
@@ -99,20 +101,26 @@ class CallMethodChannelHandler @Inject constructor(
 
     try {
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-      val phoneAccountHandle = phoneAccountManager.getPhoneAccountHandle(simSlot)
-        ?: run {
-          result.error("NO_ACCOUNT", "No phone account found for SIM $simSlot", null)
-          return@handleDial
-        }
 
-      // Build intent to place call
+      // Convert UI slot index to subscriptionId
+      val activeSims = simManager.getActiveSimSlots()
+      val subscriptionId = activeSims.getOrNull(simSlot)?.subscriptionId
+          ?: activeSims.firstOrNull()?.subscriptionId
+          ?: 0
+
+      val phoneAccountHandle = phoneAccountManager.getPhoneAccountHandle(subscriptionId)
+          ?: phoneAccountManager.getDefaultOutgoingAccount()
+          ?: run {
+            result.error("NO_ACCOUNT", "No phone account found for SIM $simSlot", null)
+            return@handleDial
+          }
+
       val uri = Uri.fromParts("tel", number, null)
-      val intent = Intent(Intent.ACTION_CALL, uri).apply {
-        putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, phoneAccountHandle)
+      val extras = android.os.Bundle().apply {
+        putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, phoneAccountHandle)
       }
-
-      context.startActivity(intent)
-      Timber.v("Dial: number=$number, simSlot=$simSlot")
+      telecomManager.placeCall(uri, extras)
+      Timber.v("Dial: number=$number, simSlot=$simSlot, subId=$subscriptionId")
       result.success(null)
     } catch (e: Exception) {
       Timber.e(e, "Failed to dial $number")
@@ -307,13 +315,10 @@ class CallMethodChannelHandler @Inject constructor(
   }
 
   private fun handleAcceptCall(call: MethodCall, result: MethodChannel.Result) {
-    val callId = call.argument<String>("callId") ?: run {
-      result.error("INVALID_ARGS", "Call ID is required", null)
-      return
-    }
+    val callId = call.argument<String>("callId")
 
     try {
-      // TODO: Accept specific call by ID
+      callOperationsManager.answerCall(callId)
       Timber.v("Accept call: $callId")
       result.success(null)
     } catch (e: Exception) {
@@ -337,9 +342,20 @@ class CallMethodChannelHandler @Inject constructor(
 
   private fun handleGetBlockedNumbers(call: MethodCall, result: MethodChannel.Result) {
     try {
-      // TODO: Query blocked numbers from repository
-      Timber.v("Get blocked numbers")
-      result.success(emptyList<String>())
+      val blockedNumbers = mutableListOf<String>()
+      val cursor = context.contentResolver.query(
+        BlockedNumberContract.BlockedNumbers.CONTENT_URI,
+        arrayOf(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER),
+        null, null, null
+      )
+      cursor?.use {
+        val colIndex = it.getColumnIndex(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER)
+        while (it.moveToNext()) {
+          blockedNumbers.add(it.getString(colIndex))
+        }
+      }
+      Timber.v("Get blocked numbers: ${blockedNumbers.size} found")
+      result.success(blockedNumbers)
     } catch (e: Exception) {
       Timber.e(e, "Failed to get blocked numbers")
       result.error("BLOCKED_ERROR", e.message, null)
@@ -353,7 +369,12 @@ class CallMethodChannelHandler @Inject constructor(
     }
 
     try {
-      // TODO: Block number via repository
+      val values = ContentValues().apply {
+        put(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER, number)
+      }
+      context.contentResolver.insert(
+        BlockedNumberContract.BlockedNumbers.CONTENT_URI, values
+      )
       Timber.v("Block number: $number")
       result.success(null)
     } catch (e: Exception) {
@@ -369,8 +390,8 @@ class CallMethodChannelHandler @Inject constructor(
     }
 
     try {
-      // TODO: Unblock number via repository
-      Timber.v("Unblock number: $number")
+      val deleted = BlockedNumberContract.unblock(context, number)
+      Timber.v("Unblock number: $number, result=$deleted")
       result.success(null)
     } catch (e: Exception) {
       Timber.e(e, "Failed to unblock number")
@@ -460,6 +481,7 @@ class CallMethodChannelHandler @Inject constructor(
       if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
         val intent = Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
           .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
       } else {
         // Fallback for older versions

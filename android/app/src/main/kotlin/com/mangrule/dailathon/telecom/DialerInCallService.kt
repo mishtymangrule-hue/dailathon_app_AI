@@ -132,7 +132,8 @@ class DialerInCallService : InCallService() {
             "DialerInCallService.onCallAudioStateChanged: " +
                     "route=${state?.route}"
         )
-        // TODO: Sync audio routing to Flutter
+        // Push updated audio state to Flutter
+        pushCallListEvent()
     }
 
     // ========== CALL STATE MANAGEMENT ==========
@@ -310,6 +311,11 @@ class DialerInCallService : InCallService() {
     private fun pushCallListEvent() {
         // Emit all active calls to Flutter via EventChannel
         try {
+            val audioState = callAudioState
+            val muted = audioState?.isMuted ?: false
+            val speaker = audioState?.route == CallAudioState.ROUTE_SPEAKER
+            val bluetooth = audioState?.route == CallAudioState.ROUTE_BLUETOOTH
+
             for (call in activeCalls) {
                 val callState = when (call.state) {
                     Call.STATE_ACTIVE -> CallState.ACTIVE
@@ -318,7 +324,7 @@ class DialerInCallService : InCallService() {
                     Call.STATE_HOLDING -> CallState.HELD
                     Call.STATE_DISCONNECTED -> CallState.DISCONNECTED
                     Call.STATE_CONNECTING -> CallState.CONNECTING
-                    Call.STATE_DISCONNECTING -> CallState.HELD
+                    Call.STATE_DISCONNECTING -> CallState.DISCONNECTED
                     else -> CallState.UNKNOWN
                 }
                 
@@ -328,9 +334,9 @@ class DialerInCallService : InCallService() {
                     state = callState,
                     duration = 0.seconds,
                     isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING,
-                    isMuted = false,
-                    isBluetoothAudio = false,
-                    isSpeakerEnabled = false,
+                    isMuted = muted,
+                    isBluetoothAudio = bluetooth,
+                    isSpeakerEnabled = speaker,
                     isHeld = call.state == Call.STATE_HOLDING,
                     simSlot = 0
                 )

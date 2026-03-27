@@ -11,6 +11,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import com.mangrule.dailathon.telecom.PhoneAccountManager
 
 /**
  * Main activity for Dailathon Telecom Dialer.
@@ -20,6 +21,7 @@ class MainActivity : FlutterActivity() {
   private lateinit var callMethodChannelHandler: CallMethodChannelHandler
   private lateinit var callEventChannelService: CallEventChannelService
   private lateinit var contactsMethodChannelHandler: ContactsMethodChannelHandler
+  private lateinit var phoneAccountManager: PhoneAccountManager
 
   @EntryPoint
   @InstallIn(SingletonComponent::class)
@@ -27,6 +29,7 @@ class MainActivity : FlutterActivity() {
     fun callMethodChannelHandler(): CallMethodChannelHandler
     fun callEventChannelService(): CallEventChannelService
     fun contactsMethodChannelHandler(): ContactsMethodChannelHandler
+    fun phoneAccountManager(): PhoneAccountManager
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,8 +43,12 @@ class MainActivity : FlutterActivity() {
     callMethodChannelHandler = entryPoint.callMethodChannelHandler()
     callEventChannelService = entryPoint.callEventChannelService()
     contactsMethodChannelHandler = entryPoint.contactsMethodChannelHandler()
+    phoneAccountManager = entryPoint.phoneAccountManager()
 
     super.onCreate(savedInstanceState)
+
+    // Register phone accounts for all SIM cards
+    phoneAccountManager.ensureAllRegistered()
     Timber.v("MainActivity created")
   }
 

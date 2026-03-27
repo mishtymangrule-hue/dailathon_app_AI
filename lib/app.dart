@@ -7,6 +7,7 @@ import 'core/service_locator.dart';
 import 'features/home/bloc/home_bloc.dart';
 import 'features/notifications/bloc/notifications_bloc.dart';
 import 'features/call_sync/bloc/call_sync_bloc.dart';
+import 'features/permissions/screens/permission_gate_screen.dart';
 import 'router.dart';
 
 class DialerApp extends StatefulWidget {
@@ -58,10 +59,13 @@ class _DialerAppState extends State<DialerApp> {
           ),
         ],
         child: MaterialApp.router(
-          title: 'Dailathon Dialer',
+          title: 'Dailathon',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           routerConfig: router,
+          builder: (context, child) => PermissionGateScreen(
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       );
 }

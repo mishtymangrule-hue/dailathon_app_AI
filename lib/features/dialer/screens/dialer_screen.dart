@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:call_log/call_log.dart' as call_log_pkg;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
 import '../../dialer/bloc/dialer_bloc.dart';
@@ -16,10 +17,48 @@ class DialerScreen extends StatefulWidget {
 }
 
 class _DialerScreenState extends State<DialerScreen> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      context.read<DialerBloc>().add(const DialerStarted());
+    }
+  }
+
   Future<void> _haptic() async {
     try {
       await HapticFeedback.selectionClick();
     } catch (_) {}
+  }
+
+  String _formatNumber(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^\d+*#]'), '');
+    if (digits.length <= 4) return digits;
+    if (digits.startsWith('+')) {
+      // +91 85528 86242 style
+      if (digits.length > 3 && digits.length <= 8) {
+        return '${digits.substring(0, 3)} ${digits.substring(3)}';
+      } else if (digits.length > 8) {
+        return '${digits.substring(0, 3)} ${digits.substring(3, 8)} ${digits.substring(8)}';
+      }
+    } else if (digits.length > 5) {
+      // 85528 86242 style
+      return '${digits.substring(0, 5)} ${digits.substring(5)}';
+    }
+    return digits;
+  }
+
+  Future<void> _pasteNumber() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.isNotEmpty) {
+      final cleaned = data.text!.replaceAll(RegExp(r'[^\d+*#]'), '');
+      if (cleaned.isNotEmpty && mounted) {
+        context.read<DialerBloc>().add(NumberChanged(number: cleaned));
+      }
+    }
   }
 
   @override
@@ -53,17 +92,31 @@ class _DialerScreenState extends State<DialerScreen> {
                         BorderRadius.circular(AppTheme.radiusMd),
                     boxShadow: AppTheme.insetShadow(),
                   ),
-                  child: Text(
-                    s.currentNumber.isEmpty ? '  ' : s.currentNumber,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w300,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: 3,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      // Paste button
+                      GestureDetector(
+                        onTap: _pasteNumber,
+                        child: const Icon(Icons.content_paste_rounded,
+                            color: AppTheme.textHint, size: 20),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.currentNumber.isEmpty ? '  ' : _formatNumber(s.currentNumber),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w300,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: 3,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 28),
+                    ],
                   ),
                 ),
               ),
@@ -167,16 +220,48 @@ class _DialerScreenState extends State<DialerScreen> {
               // ── Call button ────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.only(bottom: 28),
-                child: _CallButton(
-                  enabled: s.currentNumber.isNotEmpty,
-                  onTap: s.currentNumber.isEmpty
-                      ? null
-                      : () => context.read<DialerBloc>().add(
-                            CallInitiated(
-                              number: s.currentNumber,
-                              simSlot: s.selectedSimSlot,
-                            ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Redial last number (only when dialer is empty)
+                    if (s.currentNumber.isEmpty)
+                      GestureDetector(
+                        onTap: () async {
+                          // Get last dialed from call log
+                          try {
+                            final entries = await call_log_pkg.CallLog.get();
+                            final last = entries.firstWhere(
+                              (e) => e.callType == call_log_pkg.CallType.outgoing && e.number != null,
+                            );
+                            if (mounted && last.number != null) {
+                              context.read<DialerBloc>().add(NumberChanged(number: last.number!));
+                            }
+                          } catch (_) {}
+                        },
+                        child: Container(
+                          width: 48, height: 48,
+                          margin: const EdgeInsets.only(right: 20),
+                          decoration: BoxDecoration(
+                            color: AppTheme.bg,
+                            shape: BoxShape.circle,
+                            boxShadow: AppTheme.raisedShadow(distance: 3, blur: 8),
                           ),
+                          child: const Icon(Icons.restart_alt_rounded,
+                              color: AppTheme.textSecondary, size: 22),
+                        ),
+                      ),
+                    _CallButton(
+                      enabled: s.currentNumber.isNotEmpty,
+                      onTap: s.currentNumber.isEmpty
+                          ? null
+                          : () => context.read<DialerBloc>().add(
+                              CallInitiated(
+                                number: s.currentNumber,
+                                simSlot: s.selectedSimSlot,
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ],

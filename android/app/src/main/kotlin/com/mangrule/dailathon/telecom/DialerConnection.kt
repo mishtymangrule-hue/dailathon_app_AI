@@ -2,6 +2,7 @@ package com.mangrule.dailathon.telecom
 
 import android.content.Context
 import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
@@ -49,6 +50,7 @@ class DialerConnection(
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
     private var screenWakeLock: PowerManager.WakeLock? = null
+    private var toneGenerator: ToneGenerator? = null
 
     init {
         Timber.d("DialerConnection created: callId=$callId")
@@ -133,13 +135,39 @@ class DialerConnection(
     override fun onPlayDtmfTone(c: Char) {
         super.onPlayDtmfTone(c)
         Timber.d("DialerConnection[$callId].onPlayDtmfTone($c)")
-        // TODO: Forward to AudioRouter for tone playback
+        val toneType = when (c) {
+            '0' -> ToneGenerator.TONE_DTMF_0
+            '1' -> ToneGenerator.TONE_DTMF_1
+            '2' -> ToneGenerator.TONE_DTMF_2
+            '3' -> ToneGenerator.TONE_DTMF_3
+            '4' -> ToneGenerator.TONE_DTMF_4
+            '5' -> ToneGenerator.TONE_DTMF_5
+            '6' -> ToneGenerator.TONE_DTMF_6
+            '7' -> ToneGenerator.TONE_DTMF_7
+            '8' -> ToneGenerator.TONE_DTMF_8
+            '9' -> ToneGenerator.TONE_DTMF_9
+            '*' -> ToneGenerator.TONE_DTMF_S
+            '#' -> ToneGenerator.TONE_DTMF_P
+            else -> return
+        }
+        try {
+            if (toneGenerator == null) {
+                toneGenerator = ToneGenerator(AudioManager.STREAM_DTMF, 80)
+            }
+            toneGenerator?.startTone(toneType, 200)
+        } catch (e: Exception) {
+            Timber.e(e, "Error playing DTMF tone")
+        }
     }
 
     override fun onStopDtmfTone() {
         super.onStopDtmfTone()
         Timber.d("DialerConnection[$callId].onStopDtmfTone")
-        // TODO: Stop tone in AudioRouter
+        try {
+            toneGenerator?.stopTone()
+        } catch (e: Exception) {
+            Timber.e(e, "Error stopping DTMF tone")
+        }
     }
 
     override fun onSeparate() {
@@ -282,9 +310,10 @@ class DialerConnection(
         releaseWifiLock()
         releaseScreenWakeLock()
 
-        // Stop vibration
-        // Stop audio
-        // Cleanup audio focus
+        try {
+            toneGenerator?.release()
+        } catch (_: Exception) {}
+        toneGenerator = null
     }
 
     // ========== CALL STATE HELPERS ==========

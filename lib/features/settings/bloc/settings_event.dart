@@ -55,3 +55,27 @@ class DisableForwardingRequested extends SettingsEvent {
 class SetDefaultDialerRequested extends SettingsEvent {
   const SetDefaultDialerRequested();
 }
+
+class CallWaitingToggled extends SettingsEvent {
+  const CallWaitingToggled({required this.enabled});
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class PowerButtonEndCallToggled extends SettingsEvent {
+  const PowerButtonEndCallToggled({required this.enabled});
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class VolumeButtonBehaviorChanged extends SettingsEvent {
+  const VolumeButtonBehaviorChanged({required this.behavior});
+  final String behavior; // 'mute', 'decline', 'nothing'
+
+  @override
+  List<Object?> get props => [behavior];
+}

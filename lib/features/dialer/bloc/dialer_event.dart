@@ -7,6 +7,10 @@ abstract class DialerEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class DialerStarted extends DialerEvent {
+  const DialerStarted();
+}
+
 class NumberInput extends DialerEvent {
   const NumberInput(this.digit);
   final String digit;

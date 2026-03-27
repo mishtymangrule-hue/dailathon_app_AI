@@ -34,6 +34,7 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
     on<AnswerWaitingCallAndEnd>(_onAnswerWaitingAndEnd);
     on<DeclineWaitingCall>(_onDeclineWaitingCall);
     on<CallEnded>(_onCallEnded);
+    on<AudioRoutesUpdated>(_onAudioRoutesUpdated);
 
     _startListeningToCallEvents();
   }
@@ -238,6 +239,21 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
       await _reportEndedCall(callInfo, cause: event.cause);
     }
     emit(InCallEnded(cause: event.cause));
+  }
+
+  Future<void> _onAudioRoutesUpdated(
+    AudioRoutesUpdated event,
+    Emitter<InCallState> emit,
+  ) async {
+    if (state is InCallActive) {
+      final current = state as InCallActive;
+      emit(InCallActive(
+        callInfo: current.callInfo,
+        heldCall: current.heldCall,
+        waitingCall: current.waitingCall,
+        availableAudioRoutes: event.availableRoutes,
+      ));
+    }
   }
 
   Future<void> _reportEndedCall(CallInfo callInfo, {String? cause}) async {

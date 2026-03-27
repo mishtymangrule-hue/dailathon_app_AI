@@ -132,6 +132,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     description: 'Version 1.0.0 (Build 1)',
                     onTap: null,
                   ),
+
+                  const SizedBox(height: 32),
+
+                  // Call Behavior Section
+                  Text(
+                    'Call Behavior',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Call Waiting Toggle
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final enabled = state is SettingsLoaded
+                          ? state.callWaitingEnabled
+                          : false;
+                      return _buildToggleCard(
+                        context,
+                        title: 'Call Waiting',
+                        description: 'Allow incoming calls while on a call',
+                        value: enabled,
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(CallWaitingToggled(enabled: v)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Power Button Ends Call
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final enabled = state is SettingsLoaded
+                          ? state.powerButtonEndCall
+                          : false;
+                      return _buildToggleCard(
+                        context,
+                        title: 'Power Button Ends Call',
+                        description: 'Press power button to end active call',
+                        value: enabled,
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(PowerButtonEndCallToggled(enabled: v)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Volume Button Behavior
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final behavior = state is SettingsLoaded
+                          ? state.volumeButtonBehavior
+                          : 'mute';
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Volume Button During Ringing',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Action when volume button is pressed',
+                              style: TextStyle(
+                                  color: Colors.grey.shade600, fontSize: 12),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButton<String>(
+                              value: behavior,
+                              isExpanded: true,
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'mute', child: Text('Mute ringtone')),
+                                DropdownMenuItem(
+                                    value: 'decline',
+                                    child: Text('Decline call')),
+                                DropdownMenuItem(
+                                    value: 'nothing',
+                                    child: Text('Do nothing')),
+                              ],
+                              onChanged: (v) {
+                                if (v != null) {
+                                  context.read<SettingsBloc>().add(
+                                      VolumeButtonBehaviorChanged(behavior: v));
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -272,6 +376,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+      ),
+    );
+
+  Widget _buildToggleCard(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) => Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
       ),
     );
 

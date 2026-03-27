@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_service.dart';
-import '../../../core/permissions/permission_manager.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
 import '../bloc/home_bloc.dart';
@@ -21,15 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<HomeBloc>().add(const CheckDefaultDialerRequested());
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) {
-            PermissionManager.requestAllPermissions(context).catchError((_) {});
-          }
-        });
-      }
-    });
   }
 
   void _openAdmission() {
@@ -106,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      auth.isLoggedIn ? auth.role : 'Telecom Dialer',
+                      auth.isLoggedIn ? auth.role : 'Every Call Matters',
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 13,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
+import '../../../core/utils/call_utils.dart';
 import '../../admission_calling/bloc/admission_calling_bloc.dart';
 
 /// Neumorphic Student List — step 4, full card with Call/WhatsApp/SMS actions.
@@ -65,6 +65,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           'lastNote': i % 3 == 0 ? 'Interested, pending docs' : 'Called, no answer',
           'visited': i % 3 == 0,
           'docs': i % 2 == 0,
+          'callCount': (i * 3 + 1) % 8,
         },
       );
 
@@ -178,19 +179,20 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   Future<void> _call(Map<String, dynamic> s) async {
     context.read<AdmissionCallingBloc>().add(StudentCalled(studentId: s['id']));
-    final uri = Uri(scheme: 'tel', path: (s['phone'] as String).replaceAll(' ', ''));
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    // Increment local call count
+    setState(() {
+      s['callCount'] = (s['callCount'] as int? ?? 0) + 1;
+      s['lastCall'] = DateTime.now();
+    });
+    CallUtils.makeCall(context, s['phone'] as String);
   }
 
   Future<void> _whatsApp(Map<String, dynamic> s) async {
-    final phone = (s['phone'] as String).replaceAll(RegExp(r'[^\d+]'), '');
-    final uri = Uri.parse('https://wa.me/$phone');
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    CallUtils.openWhatsApp(context, s['phone'] as String);
   }
 
   Future<void> _sms(Map<String, dynamic> s) async {
-    final uri = Uri(scheme: 'sms', path: (s['phone'] as String).replaceAll(' ', ''));
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    CallUtils.openSms(context, s['phone'] as String);
   }
 
   static String _ago(DateTime dt) {
@@ -293,6 +295,31 @@ class _StudentCard extends StatelessWidget {
                 activeColor: AppTheme.primary,
               ),
               const Spacer(),
+              // Call count badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.call_rounded,
+                        size: 11, color: AppTheme.primary),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${student['callCount'] ?? 0}',
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.access_time_rounded,
                   size: 12, color: AppTheme.textHint),
               const SizedBox(width: 4),

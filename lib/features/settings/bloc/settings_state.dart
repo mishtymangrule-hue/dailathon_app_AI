@@ -26,6 +26,9 @@ class SettingsLoaded extends SettingsState {
     this.noAnswerEnabled = false,
     this.unreachableEnabled = false,
     this.isDefaultDialer = false,
+    this.callWaitingEnabled = false,
+    this.powerButtonEndCall = false,
+    this.volumeButtonBehavior = 'mute',
   });
 
   final String unconditionalForwarding;
@@ -37,6 +40,9 @@ class SettingsLoaded extends SettingsState {
   final bool noAnswerEnabled;
   final bool unreachableEnabled;
   final bool isDefaultDialer;
+  final bool callWaitingEnabled;
+  final bool powerButtonEndCall;
+  final String volumeButtonBehavior;
 
   bool getForwardingEnabled(String type) {
     switch (type) {
@@ -79,6 +85,9 @@ class SettingsLoaded extends SettingsState {
     noAnswerEnabled,
     unreachableEnabled,
     isDefaultDialer,
+    callWaitingEnabled,
+    powerButtonEndCall,
+    volumeButtonBehavior,
   ];
 }
 

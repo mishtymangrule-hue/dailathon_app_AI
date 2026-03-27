@@ -92,8 +92,8 @@ class AudioRouter @Inject constructor(
    */
   fun endCallAudio() {
     try {
-      // Clear communication device (API 28+)
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      // Clear communication device (API 31+)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         clearCommunicationDevice()
       } else {
         // Fallback: disable all routing options
@@ -204,11 +204,11 @@ class AudioRouter @Inject constructor(
     try {
       currentAudioDevice = device
 
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         audioManager.setCommunicationDevice(device)
         Timber.v("AudioRouter: set communication device: ${device.productName} (${getDeviceTypeName(device.type)})")
       } else {
-        // Fallback for API 21-27
+        // Fallback for API < 31
         @Suppress("DEPRECATION")
         when (device.type) {
           AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
@@ -247,7 +247,7 @@ class AudioRouter @Inject constructor(
    */
   private fun clearCommunicationDevice() {
     try {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         audioManager.clearCommunicationDevice()
         Timber.v("AudioRouter: cleared communication device")
       }
