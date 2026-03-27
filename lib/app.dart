@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/permissions/permission_manager.dart';
+import 'core/theme/app_theme.dart';
 import 'presentation/blocs.dart';
 import 'core/service_locator.dart';
 import 'features/home/bloc/home_bloc.dart';
@@ -20,7 +21,11 @@ class _DialerAppState extends State<DialerApp> {
   @override
   void initState() {
     super.initState();
-    unawaited(PermissionManager.requestAllPermissions(context));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(PermissionManager.requestAllPermissions(context));
+      }
+    });
   }
 
   @override
@@ -65,10 +70,7 @@ class _DialerAppState extends State<DialerApp> {
         child: MaterialApp.router(
           title: 'Dailathon Dialer',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-            useMaterial3: true,
-          ),
+          theme: AppTheme.light(),
           routerConfig: router,
         ),
       ),

@@ -1,91 +1,77 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/neu.dart';
 
-/// Dialpad widget displaying 0-9, *, #, and action buttons.
+/// Neumorphic dialpad — 3×4 circular keys + backspace.
 class Dialpad extends StatelessWidget {
-
   const Dialpad({
-    required this.onDigitPressed, required this.onBackspacePressed, required this.onClearPressed, Key? key,
-  }) : super(key: key);
-  final Function(String) onDigitPressed;
+    required this.onDigitPressed,
+    required this.onBackspacePressed,
+    required this.onClearPressed,
+    super.key,
+  });
+
+  final void Function(String) onDigitPressed;
   final VoidCallback onBackspacePressed;
   final VoidCallback onClearPressed;
 
+  static const List<String> _digits = [
+    '1', '2', '3',
+    '4', '5', '6',
+    '7', '8', '9',
+    '*', '0', '#',
+  ];
+
+  static const List<String> _sublabels = [
+    '', 'ABC', 'DEF',
+    'GHI', 'JKL', 'MNO',
+    'PQRS', 'TUV', 'WXYZ',
+    '', '+', '',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    const digits = <String>[
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '*', '0', '#',
-    ];
-
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-      ),
-      itemCount: 13, // 12 digits + 1 backspace
-      itemBuilder: (context, index) {
-        if (index < 12) {
-          return _DialpadButton(
-            label: digits[index],
-            onPressed: () => onDigitPressed(digits[index]),
-          );
-        } else {
-          // Backspace button
-          return _DialpadButton(
-            icon: Icons.backspace_outlined,
-            onPressed: onBackspacePressed,
-            color: Colors.red.shade500,
-          );
-        }
-      },
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 4 rows of 3 keys each
+        _buildRow(0),
+        const SizedBox(height: 16),
+        _buildRow(1),
+        const SizedBox(height: 16),
+        _buildRow(2),
+        const SizedBox(height: 16),
+        _buildRow(3),
+        const SizedBox(height: 16),
+        // Backspace
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NeuDialKey(
+              label: '',
+              icon: Icons.backspace_outlined,
+              onTap: onBackspacePressed,
+              onLongPress: onClearPressed,
+            ),
+          ],
+        ),
+      ],
     );
   }
-}
 
-/// Individual dialpad button.
-class _DialpadButton extends StatelessWidget {
-
-  const _DialpadButton({
-    required this.onPressed, this.label,
-    this.icon,
-    this.color,
-  });
-  final String? label;
-  final IconData? icon;
-  final VoidCallback onPressed;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey.shade50,
+  Widget _buildRow(int row) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        for (int col = 0; col < 3; col++)
+          NeuDialKey(
+            label: _digits[row * 3 + col],
+            sublabel: _sublabels[row * 3 + col],
+            onTap: () => onDigitPressed(_digits[row * 3 + col]),
+            onLongPress: _digits[row * 3 + col] == '0'
+                ? () => onDigitPressed('+')
+                : null,
           ),
-          child: Center(
-            child: label != null
-                ? Text(
-                    label!,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  )
-                : Icon(
-                    icon,
-                    size: 28,
-                    color: color,
-                  ),
-          ),
-        ),
-      ),
+      ],
     );
+  }
 }

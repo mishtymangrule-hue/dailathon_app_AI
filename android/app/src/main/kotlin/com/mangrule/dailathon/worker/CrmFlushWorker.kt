@@ -6,7 +6,9 @@ import androidx.work.WorkerParameters
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -40,7 +42,7 @@ class CrmFlushWorker(
                 }
 
         return try {
-            flushViaChannel(engine)
+            withContext(Dispatchers.Main) { flushViaChannel(engine) }
             Timber.d("CrmFlushWorker: flush complete")
             Result.success()
         } catch (e: Exception) {

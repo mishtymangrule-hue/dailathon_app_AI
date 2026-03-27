@@ -30,8 +30,9 @@ class MainActivity : FlutterActivity() {
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-
+    // Must initialize BEFORE super.onCreate() because FlutterActivity calls
+    // configureFlutterEngine() during super.onCreate(), and that method accesses
+    // these lateinit properties.
     val entryPoint = EntryPointAccessors.fromApplication(
       applicationContext,
       MainActivityEntryPoint::class.java,
@@ -40,6 +41,7 @@ class MainActivity : FlutterActivity() {
     callEventChannelService = entryPoint.callEventChannelService()
     contactsMethodChannelHandler = entryPoint.contactsMethodChannelHandler()
 
+    super.onCreate(savedInstanceState)
     Timber.v("MainActivity created")
   }
 

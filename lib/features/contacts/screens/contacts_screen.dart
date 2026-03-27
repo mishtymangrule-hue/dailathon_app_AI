@@ -1,212 +1,281 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/neu.dart';
 import '../../contacts/bloc/contacts_bloc.dart';
 
-/// ContactsScreen displays alphabetically indexed contacts.
+/// Neumorphic Contacts screen with search + alphabetical tiles.
 class ContactsScreen extends StatefulWidget {
-  const ContactsScreen({Key? key}) : super(key: key);
+  const ContactsScreen({super.key});
 
   @override
   State<ContactsScreen> createState() => _ContactsScreenState();
 }
 
 class _ContactsScreenState extends State<ContactsScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
+    _searchCtrl.addListener(_onSearch);
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    context.read<ContactsBloc>().add(
-          ContactSearched(_searchController.text),
-        );
+  void _onSearch() {
+    context.read<ContactsBloc>().add(ContactSearched(_searchCtrl.text));
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
+        backgroundColor: AppTheme.bg,
         title: const Text('Contacts'),
-        centerTitle: true,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search contacts...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _searchController.clear,
-                      )
-                    : null,
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: NeuTextField(
+              controller: _searchCtrl,
+              hintText: 'Search contacts ...',
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: AppTheme.textHint, size: 20),
+              suffixIcon: _searchCtrl.text.isNotEmpty
+                  ? GestureDetector(
+                      onTap: () {
+                        _searchCtrl.clear();
+                        context
+                            .read<ContactsBloc>()
+                            .add(const ContactSearched(''));
+                      },
+                      child: const Icon(Icons.close_rounded,
+                          color: AppTheme.textHint, size: 18),
+                    )
+                  : null,
             ),
           ),
-          // Contacts List
           Expanded(
             child: BlocBuilder<ContactsBloc, ContactsState>(
-              builder: (context, state) {
+              builder: (_, state) {
                 if (state is ContactsLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (state is ContactsLoaded) {
                   final contacts = state.contacts;
-
                   if (contacts.isEmpty) {
-                    return Center(
+                    return const Center(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.people,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
+                          Icon(Icons.people_outline_rounded,
+                              size: 64, color: AppTheme.textHint),
+                          SizedBox(height: 12),
                           Text(
                             'No contacts found',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color: Colors.grey,
-                                ),
+                            style:
+                                TextStyle(color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
                     );
                   }
-
                   return ListView.builder(
+                    padding:
+                        const EdgeInsets.fromLTRB(16, 0, 16, 28),
                     itemCount: contacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = contacts[index];
-                      return _ContactTile(
-                        contact: contact,
-                        onTap: () {
-                          _showContactDetail(context, contact);
-                        },
+                    itemBuilder: (ctx, i) {
+                      final c = contacts[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NeuCard(
+                          onTap: () =>
+                              _showDetail(context, c),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary
+                                      .withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    c.name[0]
+                                        .toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c.name,
+                                      style: const TextStyle(
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      c.phoneNumber,
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => _call(c),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.catInterested
+                                        .withOpacity(0.12),
+                                    borderRadius:
+                                        BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.call_rounded,
+                                    color: AppTheme.catInterested,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   );
                 }
-
-                return const Center(child: Text('Error loading contacts'));
+                return const Center(
+                    child: Text('Error loading contacts',
+                        style:
+                            TextStyle(color: AppTheme.textSecondary)));
               },
             ),
           ),
         ],
       ),
     );
+  }
 
-  void _showContactDetail(BuildContext context, dynamic contact) {
+  Future<void> _call(dynamic c) async {
+    final uri = Uri(
+        scheme: 'tel',
+        path: (c.phoneNumber as String).replaceAll(' ', ''));
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  void _showDetail(BuildContext context, dynamic c) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  child: Text(
-                    contact.name[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 32),
+      backgroundColor: AppTheme.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  (c.name as String)[0].toUpperCase(),
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  contact.name,
-                  style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              c.name as String,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              c.phoneNumber as String,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: NeuButton(
+                    label: 'Call',
+                    icon: Icons.call_rounded,
+                    color: AppTheme.catInterested,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _call(c);
+                    },
+                  ),
                 ),
-                Text(
-                  contact.phoneNumber,
-                  style: Theme.of(ctx).textTheme.bodyMedium,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: NeuButton(
+                    label: 'SMS',
+                    icon: Icons.sms_rounded,
+                    color: AppTheme.info,
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final uri = Uri(
+                          scheme: 'sms',
+                          path: (c.phoneNumber as String)
+                              .replaceAll(' ', ''));
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  ),
                 ),
               ],
             ),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.call),
-            title: const Text('Call'),
-            onTap: () {
-              Navigator.pop(ctx);
-              // TODO: Trigger call via MethodChannel
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.message),
-            title: const Text('Send SMS'),
-            onTap: () {
-              Navigator.pop(ctx);
-              // TODO: Open SMS app
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.block),
-            title: const Text('Block Number'),
-            onTap: () {
-              Navigator.pop(ctx);
-              // TODO: Block number
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Contact list tile.
-class _ContactTile extends StatelessWidget {
-
-  const _ContactTile({
-    required this.contact,
-    required this.onTap,
-  });
-  final dynamic contact;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-      child: InkWell(
-        onTap: onTap,
-        child: ListTile(
-          leading: CircleAvatar(
-            child: Text(contact.name[0].toUpperCase()),
-          ),
-          title: Text(contact.name),
-          subtitle: Text(contact.phoneNumber),
-          trailing: IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {
-              // TODO: Quick call
-            },
-          ),
-        ),
-      ),
-    );
-}

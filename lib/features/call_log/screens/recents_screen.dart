@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/neu.dart';
 import '../../call_log/bloc/call_log_bloc.dart';
 
-/// RecentsScreen displays call history with filtering options.
+/// Neumorphic Recents / Call Log screen with 4-tab filter.
 class RecentsScreen extends StatefulWidget {
-  const RecentsScreen({Key? key}) : super(key: key);
+  const RecentsScreen({super.key});
 
   @override
   State<RecentsScreen> createState() => _RecentsScreenState();
@@ -29,220 +31,190 @@ class _RecentsScreenState extends State<RecentsScreen>
   }
 
   void _onTabChanged() {
-    final filterType = _getFilterType(_tabController.index);
-    context.read<CallLogBloc>().add(CallLogTypeFiltered(filterType));
-  }
-
-  String _getFilterType(int index) {
-    switch (index) {
-      case 1:
-        return 'missed';
-      case 2:
-        return 'outgoing';
-      case 3:
-        return 'incoming';
-      default:
-        return 'all';
-    }
+    final type = const ['all', 'missed', 'outgoing', 'incoming'][_tabController.index];
+    context.read<CallLogBloc>().add(CallLogTypeFiltered(type));
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
+        backgroundColor: AppTheme.bg,
         title: const Text('Recents'),
-        centerTitle: true,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Missed'),
-            Tab(text: 'Outgoing'),
-            Tab(text: 'Incoming'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.bg,
+                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                boxShadow: AppTheme.insetShadow(),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius:
+                      BorderRadius.circular(AppTheme.radiusFull),
+                  boxShadow: AppTheme.raisedShadow(distance: 3, blur: 8),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppTheme.textSecondary,
+                labelStyle: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600),
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(text: 'All'),
+                  Tab(text: 'Missed'),
+                  Tab(text: 'Out'),
+                  Tab(text: 'In'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: BlocBuilder<CallLogBloc, CallLogState>(
-        builder: (context, state) {
+        builder: (_, state) {
           if (state is CallLogLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (state is CallLogLoaded) {
-            final callLog = state.entries;
-
-            if (callLog.isEmpty) {
-              return Center(
+            final log = state.entries;
+            if (log.isEmpty) {
+              return const Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.history,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
+                    Icon(Icons.history_rounded,
+                        size: 64, color: AppTheme.textHint),
+                    SizedBox(height: 12),
                     Text(
                       'No call history',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.grey,
-                          ),
+                      style: TextStyle(color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
               );
             }
-
             return ListView.builder(
-              itemCount: callLog.length,
-              itemBuilder: (context, index) {
-                final entry = callLog[index];
-                return _CallLogTile(
-                  entry: entry,
-                  onDelete: () {
-                    context.read<CallLogBloc>().add(
-                          CallLogEntryDeleted(entry.id),
-                        );
-                  },
-                  onBlock: () {
-                    // TODO: Implement block
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Block feature coming soon')),
-                    );
-                  },
-                );
-              },
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              itemCount: log.length,
+              itemBuilder: (ctx, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CallLogTile(
+                  entry: log[i],
+                  onDelete: () => context
+                      .read<CallLogBloc>()
+                      .add(CallLogEntryDeleted(log[i].id)),
+                ),
+              ),
             );
           }
-
-          return const Center(child: Text('Error loading call log'));
+          return const Center(
+              child: Text('Error loading call log',
+                  style: TextStyle(color: AppTheme.textSecondary)));
         },
       ),
     );
+  }
 }
 
-/// Call log entry tile.
 class _CallLogTile extends StatelessWidget {
-
-  const _CallLogTile({
-    required this.entry,
-    required this.onDelete,
-    required this.onBlock,
-  });
+  const _CallLogTile({required this.entry, required this.onDelete});
   final dynamic entry;
   final VoidCallback onDelete;
-  final VoidCallback onBlock;
 
-  IconData _getCallTypeIcon(int type) {
-    switch (type) {
-      case 1: // Incoming
-        return Icons.call_received;
-      case 2: // Outgoing
-        return Icons.call_made;
-      case 3: // Missed
-        return Icons.call_missed;
-      default:
-        return Icons.call;
-    }
-  }
+  static IconData _icon(int type) => const {
+        1: Icons.call_received_rounded,
+        2: Icons.call_made_rounded,
+        3: Icons.call_missed_rounded,
+      }[type] ??
+      Icons.call_rounded;
 
-  Color _getCallTypeColor(int type) {
-    switch (type) {
-      case 1: // Incoming
-        return Colors.green;
-      case 2: // Outgoing
-        return Colors.blue;
-      case 3: // Missed
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  static Color _color(int type) => const {
+        1: AppTheme.catInterested,
+        2: AppTheme.primary,
+        3: AppTheme.catNotInterested,
+      }[type] ??
+      AppTheme.textSecondary;
+
+  static String _time(int ts) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(ts);
+    final diff = DateTime.now().difference(dt);
+    if (diff.inDays == 0) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } else if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays}d ago';
   }
 
   @override
-  Widget build(BuildContext context) => Material(
-      child: InkWell(
-        onLongPress: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (ctx) => Column(
-              mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final color = _color(entry.type as int);
+    return NeuCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(_icon(entry.type as int), color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.content_copy),
-                  title: const Text('Copy Number'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    // TODO: Copy to clipboard
-                  },
+                Text(
+                  (entry.name ?? entry.phoneNumber) as String,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.block),
-                  title: const Text('Block Number'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onBlock();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete),
-                  title: const Text('Delete'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    onDelete();
-                  },
+                Text(
+                  entry.phoneNumber as String,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
-          );
-        },
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: _getCallTypeColor(entry.type).withOpacity(0.2),
-            child: Icon(
-              _getCallTypeIcon(entry.type),
-              color: _getCallTypeColor(entry.type),
-            ),
           ),
-          title: Text(entry.name ?? entry.phoneNumber),
-          subtitle: Text(entry.phoneNumber),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _formatTime(entry.timestamp),
-                style:
-                    Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
+                _time(entry.timestamp as int),
+                style: const TextStyle(
+                  color: AppTheme.textHint,
+                  fontSize: 11,
+                ),
               ),
-              if (entry.duration > 0)
+              if ((entry.duration as int) > 0)
                 Text(
-                  '${entry.duration ~/ 60}:${(entry.duration % 60).toString().padLeft(2, '0')}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
+                  '${(entry.duration as int) ~/ 60}:${((entry.duration as int) % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 11,
+                  ),
                 ),
             ],
           ),
-        ),
+        ],
       ),
     );
-
-  String _formatTime(int timestamp) {
-    final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays == 0) {
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
   }
 }
+

@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/neu.dart';
 import '../../admission_calling/bloc/admission_calling_bloc.dart';
 
-/// StudentListScreen displays students with pagination, search, and actions.
+/// Neumorphic Student List — step 4, full card with Call/WhatsApp/SMS actions.
 class StudentListScreen extends StatefulWidget {
-
   const StudentListScreen({
-    required this.degreeId, required this.responseId, required this.subResponseId, Key? key,
+    required this.degreeId,
+    required this.responseId,
+    required this.subResponseId,
     this.subResponseName,
-  }) : super(key: key);
+    super.key,
+  });
   final String degreeId;
   final String responseId;
   final String subResponseId;
@@ -19,143 +24,149 @@ class StudentListScreen extends StatefulWidget {
 }
 
 class _StudentListScreenState extends State<StudentListScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   late List<Map<String, dynamic>> _students;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _students = _generateMockStudents();
-    _scrollController.addListener(_onScroll);
+    _students = _mockStudents();
+    _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _scrollController.dispose();
+    _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      // Load more when reaching end
-      _loadMore();
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 100) {
+      // TODO: trigger BLoC pagination
     }
   }
 
-  void _loadMore() {
-    // TODO: Load more students via Bloc
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Loading more students...')),
-    );
+  List<Map<String, dynamic>> _mockStudents() => List.generate(
+        20,
+        (i) => {
+          'id': '$i',
+          'name': [
+            'Arjun Sharma', 'Priya Patel', 'Rahul Verma', 'Sneha Iyer',
+            'Karan Singh', 'Neha Gupta', 'Vivek Nair', 'Pooja Mehta',
+            'Amit Kumar', 'Ria Das',
+          ][i % 10],
+          'phone': '+91 ${9876540000 + i}',
+          'course': ['B.Tech CSE', 'BCA', 'MBA', 'B.Sc IT'][i % 4],
+          'lastCall': DateTime.now().subtract(Duration(days: i % 7, hours: i % 24)),
+          'lastNote': i % 3 == 0 ? 'Interested, pending docs' : 'Called, no answer',
+          'visited': i % 3 == 0,
+          'docs': i % 2 == 0,
+        },
+      );
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_query.isEmpty) return _students;
+    final q = _query.toLowerCase();
+    return _students
+        .where((s) =>
+            (s['name'] as String).toLowerCase().contains(q) ||
+            (s['phone'] as String).contains(_query))
+        .toList();
   }
 
-  List<Map<String, dynamic>> _generateMockStudents() => List.generate(
-      25,
-      (index) => {
-        'id': '$index',
-        'name': 'Student ${index + 1}',
-        'phone': '+91 ${9000000000 + index}',
-        'email': 'student${index + 1}@example.com',
-        'lastCall': DateTime.now().subtract(Duration(days: index % 7)),
-        'lastNote': 'Follow up soon',
-        'visited': index % 3 == 0,
-        'documentsCollected': index % 2 == 0,
-      },
-    );
-
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
+        backgroundColor: AppTheme.bg,
         title: Text(widget.subResponseName ?? 'Students'),
-        centerTitle: true,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Search Bar
+          // ── Search bar ────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name or number...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (_) => setState(() {}),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: NeuTextField(
+              controller: _searchCtrl,
+              hintText: 'Search by name or number ...',
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: AppTheme.textHint, size: 20),
+              suffixIcon: _query.isNotEmpty
+                  ? GestureDetector(
+                      onTap: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                      child: const Icon(Icons.close_rounded,
+                          color: AppTheme.textHint, size: 18),
+                    )
+                  : null,
+              onChanged: (v) => setState(() => _query = v),
             ),
           ),
-          // Student List
+
+          // ── Student count ─────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(
+                  '${_filtered.length} students',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── List ──────────────────────────────────────────────────────
           Expanded(
             child: BlocBuilder<AdmissionCallingBloc, AdmissionCallingState>(
-              builder: (context, state) {
-                var filteredStudents = _students;
-                if (_searchController.text.isNotEmpty) {
-                  filteredStudents = _students
-                      .where(
-                        (s) =>
-                            s['name']
-                                .toString()
-                                .toLowerCase()
-                                .contains(_searchController.text.toLowerCase()) ||
-                            s['phone']
-                                .toString()
-                                .contains(_searchController.text),
-                      )
-                      .toList();
-                }
-
-                if (filteredStudents.isEmpty) {
-                  return Center(
+              builder: (_, __) {
+                final list = _filtered;
+                if (list.isEmpty) {
+                  return const Center(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.person_search,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
+                        Icon(Icons.person_search_rounded,
+                            size: 64, color: AppTheme.textHint),
+                        SizedBox(height: 12),
                         Text(
                           'No students found',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(
-                                color: Colors.grey,
-                              ),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
-
                 return ListView.builder(
-                  controller: _scrollController,
-                  itemCount: filteredStudents.length,
-                  itemBuilder: (context, index) {
-                    final student = filteredStudents[index];
-                    return _StudentTile(
-                      student: student,
-                      onTap: () {
-                        _showStudentDetail(context, student);
-                      },
-                    );
-                  },
+                  controller: _scrollCtrl,
+                  padding:
+                      const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                  itemCount: list.length,
+                  itemBuilder: (ctx, i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _StudentCard(
+                      student: list[i],
+                      onCall: () => _call(list[i]),
+                      onWhatsApp: () => _whatsApp(list[i]),
+                      onSms: () => _sms(list[i]),
+                    ),
+                  ),
                 );
               },
             ),
@@ -163,192 +174,82 @@ class _StudentListScreenState extends State<StudentListScreen> {
         ],
       ),
     );
-
-  void _showStudentDetail(BuildContext context, Map<String, dynamic> student) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Student Info
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        child: Text(
-                          student['name'][0].toUpperCase(),
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              student['name'],
-                              style: Theme.of(ctx).textTheme.titleLarge,
-                            ),
-                            Text(
-                              student['phone'],
-                              style: Theme.of(ctx).textTheme.bodyMedium,
-                            ),
-                            Text(
-                              student['email'],
-                              style: Theme.of(ctx).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Status Badges
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      if (student['visited'])
-                        Chip(
-                          avatar: const Icon(Icons.check),
-                          label: const Text('Visited'),
-                          backgroundColor: Colors.green.shade100,
-                        ),
-                      if (student['documentsCollected'])
-                        Chip(
-                          avatar: const Icon(Icons.folder),
-                          label: const Text('Documents'),
-                          backgroundColor: Colors.blue.shade100,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Last Interaction
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Last Interaction',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        _formatDateTime(student['lastCall']),
-                        style: Theme.of(ctx).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Last Note',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        student['lastNote'],
-                        style: Theme.of(ctx).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Notes Input
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Add notes...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      context.read<AdmissionCallingBloc>().add(
-                            StudentCalled(studentId: student['id']),
-                          );
-                    },
-                    icon: const Icon(Icons.call),
-                    label: const Text('Call Now'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      // TODO: Send SMS
-                    },
-                    icon: const Icon(Icons.message),
-                    label: const Text('Send SMS'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      // TODO: Open WhatsApp
-                    },
-                    icon: const Icon(Icons.share),
-                    label: const Text('WhatsApp'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  Future<void> _call(Map<String, dynamic> s) async {
+    context.read<AdmissionCallingBloc>().add(StudentCalled(studentId: s['id']));
+    final uri = Uri(scheme: 'tel', path: (s['phone'] as String).replaceAll(' ', ''));
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
 
-    if (difference.inDays == 0) {
-      return 'Today at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else {
-      return '${difference.inDays}d ago';
-    }
+  Future<void> _whatsApp(Map<String, dynamic> s) async {
+    final phone = (s['phone'] as String).replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('https://wa.me/$phone');
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _sms(Map<String, dynamic> s) async {
+    final uri = Uri(scheme: 'sms', path: (s['phone'] as String).replaceAll(' ', ''));
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  static String _ago(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays}d ago';
   }
 }
 
-/// Student list tile.
-class _StudentTile extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const _StudentTile({
+class _StudentCard extends StatelessWidget {
+  const _StudentCard({
     required this.student,
-    required this.onTap,
+    required this.onCall,
+    required this.onWhatsApp,
+    required this.onSms,
   });
+
   final Map<String, dynamic> student;
-  final VoidCallback onTap;
+  final VoidCallback onCall;
+  final VoidCallback onWhatsApp;
+  final VoidCallback onSms;
 
   @override
-  Widget build(BuildContext context) => Material(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
+  Widget build(BuildContext context) {
+    final initials = (student['name'] as String)
+        .split(' ')
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
+
+    return NeuCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row ────────────────────────────────────────────────
+          Row(
             children: [
-              CircleAvatar(
-                child: Text(student['name'][0].toUpperCase()),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -356,35 +257,186 @@ class _StudentTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      student['name'],
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      student['name'] as String,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     Text(
-                      student['phone'],
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
-                    ),
-                    Text(
-                      'Last call: 2d ago',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
+                      '${student['phone']}  ·  ${student['course']}',
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.call),
-                onPressed: () {
-                  // TODO: Quick call
-                },
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // ── Status row ────────────────────────────────────────────────
+          Row(
+            children: [
+              _StatusDot(
+                label: 'Visited',
+                active: student['visited'] as bool,
+                activeColor: AppTheme.catInterested,
+              ),
+              const SizedBox(width: 10),
+              _StatusDot(
+                label: 'Docs',
+                active: student['docs'] as bool,
+                activeColor: AppTheme.primary,
+              ),
+              const Spacer(),
+              const Icon(Icons.access_time_rounded,
+                  size: 12, color: AppTheme.textHint),
+              const SizedBox(width: 4),
+              Text(
+                _StudentListScreenState._ago(
+                    student['lastCall'] as DateTime),
+                style: const TextStyle(
+                  color: AppTheme.textHint,
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
+
+          // ── Last note ─────────────────────────────────────────────────
+          if ((student['lastNote'] as String).isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              student['lastNote'] as String,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFD6DCE6)),
+          const SizedBox(height: 10),
+
+          // ── Action buttons ────────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.call_rounded,
+                  label: 'Call',
+                  color: AppTheme.catInterested,
+                  onTap: onCall,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.chat_rounded,
+                  label: 'WhatsApp',
+                  color: const Color(0xFF25D366),
+                  onTap: onWhatsApp,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.sms_rounded,
+                  label: 'SMS',
+                  color: AppTheme.info,
+                  onTap: onSms,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({
+    required this.label,
+    required this.active,
+    required this.activeColor,
+  });
+  final String label;
+  final bool active;
+  final Color activeColor;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: active ? activeColor : AppTheme.textHint,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$label: ${active ? '✓' : '○'}',
+            style: TextStyle(
+              color: active ? activeColor : AppTheme.textHint,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          border: Border.all(color: color.withOpacity(0.25), width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
 }
+
