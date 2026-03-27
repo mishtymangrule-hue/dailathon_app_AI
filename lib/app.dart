@@ -1,7 +1,6 @@
 import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'core/permissions/permission_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/blocs.dart';
 import 'core/service_locator.dart';
@@ -21,20 +20,11 @@ class _DialerAppState extends State<DialerApp> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        unawaited(PermissionManager.requestAllPermissions(context));
-      }
-    });
   }
 
   @override
-  Widget build(BuildContext context) => MultiRepositoryProvider(
-      providers: const [
-        // Add any repositories here if needed
-      ],
-      child: MultiBlocProvider(
-        providers: [
+  Widget build(BuildContext context) => MultiBlocProvider(
+      providers: [
           BlocProvider<DialerBloc>(
             create: (context) => ServiceLocator().dialerBloc,
           ),
@@ -73,6 +63,5 @@ class _DialerAppState extends State<DialerApp> {
           theme: AppTheme.light(),
           routerConfig: router,
         ),
-      ),
-    );
+      );
 }

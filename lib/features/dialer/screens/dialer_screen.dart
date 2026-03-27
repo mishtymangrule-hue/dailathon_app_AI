@@ -36,14 +36,6 @@ class _DialerScreenState extends State<DialerScreen> {
           if (state is DialerCalling) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (state is DialerError) {
-            return Center(
-              child: Text(
-                'Error: ${state.error}',
-                style: const TextStyle(color: AppTheme.catNotInterested),
-              ),
-            );
-          }
           final s = state is DialerActive ? state : const DialerActive();
 
           return Column(

@@ -86,8 +86,14 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
         currentState.currentNumber,
         simSlot: currentState.selectedSimSlot,
       );
+      emit(DialerActive(
+        selectedSimSlot: currentState.selectedSimSlot,
+      ));
     } catch (e) {
-      emit(DialerError(error: e.toString()));
+      emit(DialerActive(
+        currentNumber: currentState.currentNumber,
+        selectedSimSlot: currentState.selectedSimSlot,
+      ));
     }
   }
 
@@ -130,11 +136,11 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     NumberChanged event,
     Emitter<DialerState> emit,
   ) async {
-    final currentState = state is DialerActive ? state as DialerActive : const DialerActive();
+    final selectedSim = state is DialerActive ? (state as DialerActive).selectedSimSlot : 0;
     emit(
       DialerActive(
         currentNumber: event.number,
-        selectedSimSlot: currentState.selectedSimSlot,
+        selectedSimSlot: selectedSim,
       ),
     );
   }

@@ -20,6 +20,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
   void initState() {
     super.initState();
     _searchCtrl.addListener(_onSearch);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ContactsBloc>().add(const ContactsRequested());
+    });
   }
 
   @override
