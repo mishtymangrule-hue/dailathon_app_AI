@@ -52,7 +52,7 @@ class UssdManager @Inject constructor(
                 teleManager
             }
 
-            tm.sendUssdRequest(code, Handler(Looper.getMainLooper()), object :
+            tm.sendUssdRequest(code, object :
                 TelephonyManager.UssdResponseCallback() {
                 override fun onReceiveUssdResponse(
                     telephonyManager: TelephonyManager,
@@ -75,7 +75,7 @@ class UssdManager @Inject constructor(
                         "USSD request failed with code $failureCode"
                     )
                 }
-            })
+            }, Handler(Looper.getMainLooper()))
         } else {
             // API < 26: fall back to dialing the USSD code directly
             val uri = Uri.fromParts("tel", Uri.encode(code), null)

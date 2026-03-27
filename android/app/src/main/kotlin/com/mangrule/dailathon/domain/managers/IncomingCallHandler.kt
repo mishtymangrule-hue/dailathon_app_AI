@@ -4,7 +4,7 @@ import android.telecom.Call
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import com.mangrule.dailathon.presentation.notifications.IncomingCallNotificationManager
-import com.mangrule.dailathon.domain.repositories.ContactsRepository
+import com.mangrule.dailathon.contacts.ContactsRepository
 import android.content.Context
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,7 +31,7 @@ class IncomingCallHandler @Inject constructor(
     try {
       // Look up contact display name
       val displayName = try {
-        contactsRepository.lookupByNumber(phoneNumber)?.displayName
+        contactsRepository.lookupByNumber(phoneNumber)?.name
       } catch (e: Exception) {
         Timber.w(e, "Failed to lookup contact for $phoneNumber")
         null

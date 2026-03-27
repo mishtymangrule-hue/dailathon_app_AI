@@ -1,16 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class SimInfo extends Equatable {
-
-  factory SimInfo.fromMap(Map<String, dynamic> map) {
-    return SimInfo(
-      subscriptionId: map['subscriptionId'] ?? 0,
-      slotIndex: map['slotIndex'] ?? 0,
-      displayName: map['displayName'] ?? 'SIM',
-      iccId: map['iccId'],
-      isDefault: map['isDefault'] ?? false,
-    );
-  }
   const SimInfo({
     required this.subscriptionId,
     required this.slotIndex,
@@ -18,6 +8,14 @@ class SimInfo extends Equatable {
     this.iccId,
     this.isDefault = false,
   });
+
+  factory SimInfo.fromMap(Map<String, dynamic> map) => SimInfo(
+      subscriptionId: map['subscriptionId'] ?? 0,
+      slotIndex: map['slotIndex'] ?? 0,
+      displayName: map['displayName'] ?? 'SIM',
+      iccId: map['iccId'],
+      isDefault: map['isDefault'] ?? false,
+    );
 
   final int subscriptionId;
   final int slotIndex;

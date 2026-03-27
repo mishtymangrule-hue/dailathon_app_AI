@@ -9,8 +9,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.mangrule.dailathon.MainActivity
-import com.mangrule.dailathon.R
+import com.mangrule.dailathon.presentation.activities.MainActivity
 import timber.log.Timber
 
 const val CHANNEL_MISSED = "missed_calls"
@@ -57,13 +56,13 @@ object MissedCallNotification {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_MISSED)
-            .setSmallIcon(R.drawable.ic_call_missed)
+            .setSmallIcon(android.R.drawable.sym_call_missed)
             .setContentTitle("Missed call")
             .setContentText(callerName.ifBlank { callerNumber })
             .setSubText(callerNumber.takeIf { callerName.isNotBlank() })
             .setContentIntent(openLogPi)
             .setAutoCancel(true)
-            .addAction(R.drawable.ic_call, "Call Back", callBackPi)
+            .addAction(android.R.drawable.sym_action_call, "Call Back", callBackPi)
             .setCategory(NotificationCompat.CATEGORY_MISSED_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

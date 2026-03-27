@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 class Dialpad extends StatelessWidget {
 
   const Dialpad({
-    Key? key,
-    required this.onDigitPressed,
-    required this.onBackspacePressed,
-    required this.onClearPressed,
+    required this.onDigitPressed, required this.onBackspacePressed, required this.onClearPressed, Key? key,
   }) : super(key: key);
   final Function(String) onDigitPressed;
   final VoidCallback onBackspacePressed;
@@ -53,9 +50,8 @@ class Dialpad extends StatelessWidget {
 class _DialpadButton extends StatelessWidget {
 
   const _DialpadButton({
-    this.label,
+    required this.onPressed, this.label,
     this.icon,
-    required this.onPressed,
     this.color,
   });
   final String? label;

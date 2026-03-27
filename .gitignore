@@ -1,0 +1,30 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Android/Gradle local and generated files
+android/.gradle/
+android/build/
+android/local.properties
+android/**/build/
+android/**/.cxx/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+
+# Generated logs and diagnostics
+*.log
+kapt_verbose.log
+analyze.txt
+analyze_full.txt
+buildlog.txt
+final_analyze.txt
+build_log.txt
+build_log2.txt
+build_output.txt
+build_verbose.txt

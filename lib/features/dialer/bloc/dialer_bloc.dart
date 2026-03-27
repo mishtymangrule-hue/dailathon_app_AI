@@ -1,8 +1,7 @@
-import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/models/contact.dart';
-import 'package:dailathon_dialer/core/models/sim_info.dart';
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'dialer_event.dart';
 part 'dialer_state.dart';

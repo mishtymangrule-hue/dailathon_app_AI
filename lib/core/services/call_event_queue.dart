@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:dailathon_dialer/core/services/crm_reporting_service.dart' show CrmReportingService;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 

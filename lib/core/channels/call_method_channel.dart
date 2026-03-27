@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import '../models/call_info.dart';
 
 class CallMethodChannel {
   static const _channel = MethodChannel('com.mangrule.dailathon/call_commands');

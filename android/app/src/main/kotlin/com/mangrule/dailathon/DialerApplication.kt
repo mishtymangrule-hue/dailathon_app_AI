@@ -95,7 +95,7 @@ class DialerApplication : Application() {
         try {
             val engine = FlutterEngine(this)
             engine.dartExecutor.executeDartEntrypoint(
-                io.flutter.embedding.engine.DartExecutor.DartEntrypoint.createDefault()
+                io.flutter.embedding.engine.dart.DartExecutor.DartEntrypoint.createDefault()
             )
             FlutterEngineCache.getInstance().put("main_engine", engine)
             Timber.d("DialerApplication: Flutter engine initialized")

@@ -1,18 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
-    kotlin("android")
+    id("kotlin-android")
     kotlin("kapt")
     id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.mangrule.dailathon"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mangrule.dailathon"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
 
@@ -21,16 +26,17 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     signingConfigs {
@@ -38,7 +44,7 @@ android {
             // Load signing properties from file
             val signingPropsFile = rootProject.file("signing.properties")
             if (signingPropsFile.exists()) {
-                val props = java.util.Properties()
+                val props = Properties()
                 props.load(signingPropsFile.inputStream())
                 
                 storeFile = rootProject.file(props.getProperty("KEYSTORE_PATH", "./release.keystore"))
@@ -81,15 +87,20 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.multidex:multidex:2.0.1")
 
-    // Flutter
-    implementation("io.flutter:flutter_embedding_release")
+    // Jetpack Compose
+    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.activity:activity-compose:1.8.2")
 
-    // Telecom framework
-    implementation("androidx.telecom:telecom:1.0.0-alpha10")
+    // Flutter
+    // Note: Flutter engine is automatically added by dev.flutter.flutter-gradle-plugin
 
     // Hilt DI
-    implementation("com.google.dagger:hilt-android:2.50")
-    kapt("com.google.dagger:hilt-compiler:2.50")
+    implementation("com.google.dagger:hilt-android:2.56.2")
+    kapt("com.google.dagger:hilt-compiler:2.56.2")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -103,6 +114,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
@@ -113,7 +127,11 @@ dependencies {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        suppressWarnings = false
+    compilerOptions {
+        suppressWarnings.set(false)
     }
+}
+
+flutter {
+    source = "../.."
 }

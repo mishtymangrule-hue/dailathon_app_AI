@@ -7,8 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.mangrule.dailathon.MainActivity
-import com.mangrule.dailathon.R
+import com.mangrule.dailathon.presentation.activities.MainActivity
 import timber.log.Timber
 
 const val CHANNEL_ONGOING = "ongoing_call"
@@ -62,11 +61,11 @@ object OngoingCallNotification {
         )
 
         val muteLabel = if (isMuted) "Unmute" else "Mute"
-        val muteIcon = if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic
+        val muteIcon = if (isMuted) android.R.drawable.ic_lock_silent_mode else android.R.drawable.ic_btn_speak_now
         val elapsedLabel = formatElapsed(elapsedSeconds)
 
         return NotificationCompat.Builder(context, CHANNEL_ONGOING)
-            .setSmallIcon(R.drawable.ic_call_active)
+            .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle(callerName.ifBlank { callerNumber })
             .setContentText("Active call · $elapsedLabel")
             .setSubText(callerNumber.takeIf { callerName.isNotBlank() })
@@ -77,7 +76,7 @@ object OngoingCallNotification {
             .setUsesChronometer(true)
             .setWhen(System.currentTimeMillis() - (elapsedSeconds * 1000L))
             .addAction(muteIcon, muteLabel, mutePendingIntent)
-            .addAction(R.drawable.ic_call_end, "Hang Up", hangupPendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Hang Up", hangupPendingIntent)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
@@ -91,8 +90,8 @@ object OngoingCallNotification {
         elapsedSeconds: Int
     ) {
         val nm = context.getSystemService(NotificationManager::class.java)
-        nm.notify(NOTIFICATION_ID, build(context, callerName, callerNumber,
-            isMuted, elapsedSeconds))
+        val elapsedLabel = formatElapsed(elapsedSeconds)
+        nm.notify(NOTIFICATION_ID, build(context, callerName, callerNumber, isMuted, elapsedSeconds))
         Timber.v("Updated ongoing call notification: $callerName ($elapsedLabel)")
     }
 

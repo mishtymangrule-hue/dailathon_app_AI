@@ -5,8 +5,10 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
+import android.telecom.CallAudioState
 import android.telecom.Connection
 import android.telecom.DisconnectCause
+import android.telecom.TelecomManager
 import androidx.core.content.ContextCompat
 import timber.log.Timber
 import java.util.UUID
@@ -292,8 +294,8 @@ class DialerConnection(
      */
     fun setDialing(number: String, displayName: String? = null) {
         Timber.d("DialerConnection[$callId].setDialing($number)")
-        setAddress(android.net.Uri.fromParts("tel", number, null), PRESENTATION_ALLOWED)
-        setCallerDisplayName(displayName ?: number, PRESENTATION_ALLOWED)
+        setAddress(android.net.Uri.fromParts("tel", number, null), TelecomManager.PRESENTATION_ALLOWED)
+        setCallerDisplayName(displayName ?: number, TelecomManager.PRESENTATION_ALLOWED)
         setDialing()
         callStartTime = SystemClock.uptimeMillis()
         acquireWakeLock()
@@ -305,8 +307,8 @@ class DialerConnection(
      */
     fun setRinging(number: String, displayName: String? = null) {
         Timber.d("DialerConnection[$callId].setRinging($number)")
-        setAddress(android.net.Uri.fromParts("tel", number, null), PRESENTATION_ALLOWED)
-        setCallerDisplayName(displayName ?: number, PRESENTATION_ALLOWED)
+        setAddress(android.net.Uri.fromParts("tel", number, null), TelecomManager.PRESENTATION_ALLOWED)
+        setCallerDisplayName(displayName ?: number, TelecomManager.PRESENTATION_ALLOWED)
         setRinging()
         acquireWakeLock()
         // Start ringing vibration pattern

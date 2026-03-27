@@ -23,9 +23,9 @@ class DialerConference(
     init {
         Timber.d("DialerConference created: confId=$conferenceId")
         setConnectionCapabilities(
-            CAPABILITY_SUPPORT_HOLD or
-            CAPABILITY_MERGE_CONFERENCE or
-            CAPABILITY_SWAP_CONFERENCE
+            Connection.CAPABILITY_SUPPORT_HOLD or
+            Connection.CAPABILITY_MERGE_CONFERENCE or
+            Connection.CAPABILITY_SWAP_CONFERENCE
         )
     }
 
@@ -124,18 +124,12 @@ class DialerConference(
     // ========== HELPERS ==========
 
     private fun updateConferenceState() {
-        val state = if (isValid()) {
-            STATE_ACTIVE
-        } else {
-            STATE_DISCONNECTED
-        }
-
         setConnectionCapabilities(
-            CAPABILITY_SUPPORT_HOLD or
-            CAPABILITY_MERGE_CONFERENCE or
-            CAPABILITY_SWAP_CONFERENCE
+            Connection.CAPABILITY_SUPPORT_HOLD or
+            Connection.CAPABILITY_MERGE_CONFERENCE or
+            Connection.CAPABILITY_SWAP_CONFERENCE
         )
 
-        Timber.d("DialerConference[$conferenceId].updateConferenceState: $state (members=${memberConnections.size})")
+        Timber.d("DialerConference[$conferenceId].updateConferenceState: members=${memberConnections.size}, valid=${isValid()}")
     }
 }

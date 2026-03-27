@@ -2,18 +2,6 @@ import 'package:equatable/equatable.dart';
 
 /// Represents a single call log entry.
 class CallLogEntry extends Equatable {
-
-  /// Create CallLogEntry from a map (from native code)
-  factory CallLogEntry.fromMap(Map<String, dynamic> map) {
-    return CallLogEntry(
-      id: map['id'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? map['number'] ?? '',
-      name: map['name'] ?? '',
-      timestamp: map['timestamp'] ?? 0,
-      duration: map['duration'] ?? 0,
-      type: map['type'] ?? 0,
-    );
-  }
   const CallLogEntry({
     required this.id,
     required this.phoneNumber,
@@ -22,6 +10,16 @@ class CallLogEntry extends Equatable {
     required this.duration,
     required this.type,
   });
+
+  /// Create CallLogEntry from a map (from native code)
+  factory CallLogEntry.fromMap(Map<String, dynamic> map) => CallLogEntry(
+      id: map['id'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? map['number'] ?? '',
+      name: map['name'] ?? '',
+      timestamp: map['timestamp'] ?? 0,
+      duration: map['duration'] ?? 0,
+      type: map['type'] ?? 0,
+    );
 
   /// Unique identifier for the call log entry
   final String id;

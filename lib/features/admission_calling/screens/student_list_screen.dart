@@ -6,10 +6,7 @@ import '../../admission_calling/bloc/admission_calling_bloc.dart';
 class StudentListScreen extends StatefulWidget {
 
   const StudentListScreen({
-    Key? key,
-    required this.degreeId,
-    required this.responseId,
-    required this.subResponseId,
+    required this.degreeId, required this.responseId, required this.subResponseId, Key? key,
     this.subResponseName,
   }) : super(key: key);
   final String degreeId;
@@ -80,7 +77,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
         children: [
           // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -347,7 +344,7 @@ class _StudentTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               CircleAvatar(

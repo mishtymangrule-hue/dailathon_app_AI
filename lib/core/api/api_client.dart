@@ -325,19 +325,16 @@ class AuthResponse {
 
   AuthResponse({
     required this.accessToken,
-    this.refreshToken,
-    required this.expiresAt,
+    required this.expiresAt, this.refreshToken,
     this.user,
   });
 
-  factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    return AuthResponse(
+  factory AuthResponse.fromJson(Map<String, dynamic> json) => AuthResponse(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String?,
       expiresAt: DateTime.parse(json['expiresAt'] as String),
       user: json['user'] as Map<String, dynamic>?,
     );
-  }
   final String accessToken;
   final String? refreshToken;
   final DateTime expiresAt;

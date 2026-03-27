@@ -1,6 +1,6 @@
+import 'package:dailathon_dialer/core/models/call_info.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:dailathon_dialer/core/models/call_info.dart';
 
 part 'admission_calling_event.dart';
 part 'admission_calling_state.dart';

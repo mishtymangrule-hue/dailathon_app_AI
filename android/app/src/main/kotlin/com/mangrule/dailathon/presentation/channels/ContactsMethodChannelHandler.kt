@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import timber.log.Timber
 import com.mangrule.dailathon.contacts.ContactsRepository
@@ -69,7 +70,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Get call log entries.
      * Returns list of call log items as maps.
      */
-    private fun handleGetCallLog(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleGetCallLog(call: MethodCall, result: MethodChannel.Result) {
         try {
             val limit = call.argument<Int>("limit") ?: 500
             val type = call.argument<Int>("type")  // Optional: filter by type (INCOMING, OUTGOING, MISSED)
@@ -103,7 +104,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Get all contacts with phone numbers.
      * Returns list of contact items as maps.
      */
-    private fun handleGetContacts(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleGetContacts(call: MethodCall, result: MethodChannel.Result) {
         try {
             val contacts = contactsRepository.getAllContacts()
 
@@ -128,7 +129,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Search contacts by query using T9 matching.
      * Supports fuzzy matching on display names and numbers.
      */
-    private fun handleSearchContacts(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleSearchContacts(call: MethodCall, result: MethodChannel.Result) {
         val query = call.argument<String>("query") ?: run {
             result.error("INVALID_ARGS", "Query is required", null)
             return
@@ -158,7 +159,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Look up a single contact by phone number.
      * Returns contact info as map or null if not found.
      */
-    private fun handleLookupNumber(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleLookupNumber(call: MethodCall, result: MethodChannel.Result) {
         val number = call.argument<String>("number") ?: run {
             result.error("INVALID_ARGS", "Phone number is required", null)
             return
@@ -190,7 +191,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Get starred/favorite contacts.
      * Returns filtered list of contacts marked as favorites in system contacts.
      */
-    private fun handleGetFavoriteContacts(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleGetFavoriteContacts(call: MethodCall, result: MethodChannel.Result) {
         try {
             val contacts = contactsRepository.getFavoriteContacts()
 
@@ -215,7 +216,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Get all blocked phone numbers.
      * Uses BlockedNumberContract (API 24+) with SharedPreferences fallback.
      */
-    private fun handleGetBlockedNumbers(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleGetBlockedNumbers(call: MethodCall, result: MethodChannel.Result) {
         try {
             val blockedNumbers = blockedNumbersRepository.getBlockedNumbers()
             Timber.v("GetBlockedNumbers: ${blockedNumbers.size} numbers blocked")
@@ -230,7 +231,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Block a phone number.
      * Uses BlockedNumberContract (API 24+) with SharedPreferences fallback.
      */
-    private fun handleBlockNumber(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleBlockNumber(call: MethodCall, result: MethodChannel.Result) {
         val number = call.argument<String>("number") ?: run {
             result.error("INVALID_ARGS", "Phone number is required", null)
             return
@@ -250,7 +251,7 @@ class ContactsMethodChannelHandler @Inject constructor(
      * Unblock a phone number.
      * Uses BlockedNumberContract (API 24+) with SharedPreferences fallback.
      */
-    private fun handleUnblockNumber(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleUnblockNumber(call: MethodCall, result: MethodChannel.Result) {
         val number = call.argument<String>("number") ?: run {
             result.error("INVALID_ARGS", "Phone number is required", null)
             return
@@ -269,7 +270,7 @@ class ContactsMethodChannelHandler @Inject constructor(
     /**
      * Check if a phone number is blocked.
      */
-    private fun handleIsBlocked(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleIsBlocked(call: MethodCall, result: MethodChannel.Result) {
         val number = call.argument<String>("number") ?: run {
             result.error("INVALID_ARGS", "Phone number is required", null)
             return
@@ -288,7 +289,7 @@ class ContactsMethodChannelHandler @Inject constructor(
     /**
      * Delete a specific call log entry.
      */
-    private fun handleDeleteCallLogEntry(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleDeleteCallLogEntry(call: MethodCall, result: MethodChannel.Result) {
         val entryId = call.argument<String>("entryId") ?: run {
             result.error("INVALID_ARGS", "Entry ID is required", null)
             return
@@ -307,7 +308,7 @@ class ContactsMethodChannelHandler @Inject constructor(
     /**
      * Clear all call log entries.
      */
-    private fun handleClearCallLog(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    private fun handleClearCallLog(call: MethodCall, result: MethodChannel.Result) {
         try {
             callLogRepository.clearCallLog()
             Timber.v("ClearCallLog: all entries cleared")
@@ -318,3 +319,4 @@ class ContactsMethodChannelHandler @Inject constructor(
         }
     }
 }
+

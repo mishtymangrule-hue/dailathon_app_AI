@@ -1,27 +1,27 @@
+import 'package:dailathon_dialer/core/api/api_client.dart';
+import 'package:dailathon_dialer/core/channels/call_event_channel.dart';
 import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/channels/contacts_method_channel.dart';
 import 'package:dailathon_dialer/core/channels/speed_dial_method_channel.dart';
-import 'package:dailathon_dialer/core/channels/call_event_channel.dart';
 import 'package:dailathon_dialer/core/channels/ussd_event_channel.dart';
-import 'package:dailathon_dialer/core/repositories/call_log_repository.dart';
 import 'package:dailathon_dialer/core/repositories/call_forwarding_repository.dart';
+import 'package:dailathon_dialer/core/repositories/call_log_repository.dart';
 import 'package:dailathon_dialer/core/repositories/crm_repository.dart';
 import 'package:dailathon_dialer/core/repositories/notification_repository.dart';
-import 'package:dailathon_dialer/core/api/api_client.dart';
 import 'package:dailathon_dialer/core/services/call_event_logger.dart';
 import 'package:dailathon_dialer/core/services/call_event_queue.dart';
 import 'package:dailathon_dialer/core/services/crm_reporting_service.dart';
 import 'package:dailathon_dialer/core/services/notification_sync_service.dart';
-import 'package:dailathon_dialer/features/dialer/bloc/dialer_bloc.dart';
-import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
-import 'package:dailathon_dialer/features/contacts/bloc/contacts_bloc.dart';
-import 'package:dailathon_dialer/features/call_log/bloc/call_log_bloc.dart';
-import 'package:dailathon_dialer/features/blocked_numbers/bloc/blocked_numbers_bloc.dart';
 import 'package:dailathon_dialer/features/admission_calling/bloc/admission_calling_bloc.dart';
-import 'package:dailathon_dialer/features/settings/bloc/settings_bloc.dart';
-import 'package:dailathon_dialer/features/home/bloc/home_bloc.dart';
-import 'package:dailathon_dialer/features/notifications/bloc/notifications_bloc.dart';
+import 'package:dailathon_dialer/features/blocked_numbers/bloc/blocked_numbers_bloc.dart';
+import 'package:dailathon_dialer/features/call_log/bloc/call_log_bloc.dart';
 import 'package:dailathon_dialer/features/call_sync/bloc/call_sync_bloc.dart';
+import 'package:dailathon_dialer/features/contacts/bloc/contacts_bloc.dart';
+import 'package:dailathon_dialer/features/dialer/bloc/dialer_bloc.dart';
+import 'package:dailathon_dialer/features/home/bloc/home_bloc.dart';
+import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
+import 'package:dailathon_dialer/features/notifications/bloc/notifications_bloc.dart';
+import 'package:dailathon_dialer/features/settings/bloc/settings_bloc.dart';
 
 /// Simple service locator for dependency injection (no external packages).
 /// 

@@ -33,7 +33,7 @@ class DegreeListScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final degree = mockDegrees[index];
               return ListTile(
-                title: Text(degree['name'] as String),
+                title: Text(degree['name']! as String),
                 subtitle: Text(
                   '${degree['totalStudents']} students',
                 ),

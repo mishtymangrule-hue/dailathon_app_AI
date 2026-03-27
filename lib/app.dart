@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/permissions/permission_manager.dart';
@@ -16,17 +17,15 @@ class DialerApp extends StatefulWidget {
 }
 
 class _DialerAppState extends State<DialerApp> {
-  late Future<bool> _permissionsFuture;
-
   @override
   void initState() {
     super.initState();
-    _permissionsFuture = PermissionManager.requestAllPermissions(context);
+    unawaited(PermissionManager.requestAllPermissions(context));
   }
 
   @override
   Widget build(BuildContext context) => MultiRepositoryProvider(
-      providers: [
+      providers: const [
         // Add any repositories here if needed
       ],
       child: MultiBlocProvider(
@@ -74,5 +73,4 @@ class _DialerAppState extends State<DialerApp> {
         ),
       ),
     );
-  }
 }

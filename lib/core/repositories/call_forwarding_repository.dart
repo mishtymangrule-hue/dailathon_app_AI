@@ -6,18 +6,25 @@ class CallForwardingRepository {
 
   final CallMethodChannel _callMethodChannel;
 
-  /// Set call forwarding for the specified reason.
-  /// Reason: 'unconditional', 'busy', 'noAnswer', 'unreachable'
+  /// Set call forwarding.
+  /// [type] maps reason: 0=unconditional, 1=busy, 2=noAnswer, 3=unreachable
   Future<void> setForwarding({
     required String reason,
     required String number,
     required bool enable,
   }) async {
+    const reasonTypeMap = {
+      'unconditional': 0,
+      'busy': 1,
+      'noAnswer': 2,
+      'unreachable': 3,
+    };
+    final type = reasonTypeMap[reason] ?? 0;
     try {
       await _callMethodChannel.setCallForwarding(
-        reason: reason,
+        enabled: enable,
+        type: type,
         number: number,
-        enable: enable,
       );
     } catch (e) {
       rethrow;

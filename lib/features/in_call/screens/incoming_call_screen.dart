@@ -8,8 +8,7 @@ import 'package:dailathon_dialer/core/models/call_info.dart';
 class IncomingCallScreen extends StatefulWidget {
 
   const IncomingCallScreen({
-    Key? key,
-    required this.phoneNumber,
+    required this.phoneNumber, Key? key,
     this.displayName,
     this.callId,
   }) : super(key: key);
@@ -73,7 +72,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           children: [
             // Top status bar with elapsed time
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -172,7 +171,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
             // Action buttons
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -215,7 +214,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
             // Additional actions
             Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.only(bottom: 16),
               child: Text(
                 'Volume Up = Answer  |  Volume Down = Decline',
                 style: TextStyle(

@@ -9,9 +9,27 @@ enum CallState {
 }
 
 class CallInfo extends Equatable {
+  const CallInfo({
+    required this.callId,
+    required this.state,
+    required this.callerNumber,
+    this.callerName,
+    this.callerPhotoUri,
+    this.durationSeconds = 0,
+    this.isMuted = false,
+    this.isSpeakerOn = false,
+    this.isBluetoothActive = false,
+    this.isWiredHeadsetConnected = false,
+    this.isOnHold = false,
+    this.isConference = false,
+    this.conferenceMemberIds = const [],
+    this.simSlot = 0,
+    this.disconnectCause,
+    this.callType = 'normal',  // 'normal', 'call_waiting', 'conference'
+    this.callerCrmStatus,
+  });
 
-  factory CallInfo.fromMap(Map<String, dynamic> map) {
-    return CallInfo(
+  factory CallInfo.fromMap(Map<String, dynamic> map) => CallInfo(
       callId: map['callId'] ?? '',
       state: CallState.values.firstWhere(
         (e) => e.toString().split('.').last == (map['state'] ?? 'ringing'),
@@ -32,26 +50,6 @@ class CallInfo extends Equatable {
       disconnectCause: map['disconnectCause'],
       callType: map['callType'] ?? 'normal',
     );
-  }
-  const CallInfo({
-    required this.callId,
-    required this.state,
-    required this.callerNumber,
-    this.callerName,
-    this.callerPhotoUri,
-    this.durationSeconds = 0,
-    this.isMuted = false,
-    this.isSpeakerOn = false,
-    this.isBluetoothActive = false,
-    this.isWiredHeadsetConnected = false,
-    this.isOnHold = false,
-    this.isConference = false,
-    this.conferenceMemberIds = const [],
-    this.simSlot = 0,
-    this.disconnectCause,
-    this.callType = 'normal',  // 'normal', 'call_waiting', 'conference'
-    this.callerCrmStatus,
-  });
 
   final String callId;
   final CallState state;

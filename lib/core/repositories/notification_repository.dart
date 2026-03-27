@@ -109,7 +109,7 @@ class NotificationRepository {
     final result = await db.rawQuery(
       "SELECT COUNT(*) as cnt FROM notifications WHERE status IN ('pending','delivered')",
     );
-    return (result.first['cnt'] as int? ?? 0);
+    return result.first['cnt'] as int? ?? 0;
   }
 
   Future<void> updateStatus(String id, NotificationStatus status,

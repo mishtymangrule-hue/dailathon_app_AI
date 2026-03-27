@@ -252,7 +252,7 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
         : (cause?.toLowerCase().contains('reject') == true) ? 'declined'
         : 'missed';
 
-    await _reportingService?.reportCallEnd({
+    await _reportingService.reportCallEnd({
       'callId': callInfo.callId,
       'phoneNumber': callInfo.callerNumber,
       'direction': 'outbound',

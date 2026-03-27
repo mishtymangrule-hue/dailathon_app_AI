@@ -17,14 +17,9 @@ class CallEvent {
   CallEvent({
     required this.callId,
     required this.phoneNumber,
-    this.contactId,
+    required this.startTime, required this.ringingDurationSeconds, required this.activeDurationSeconds, required this.classification, required this.direction, this.contactId,
     this.employeeId,
-    required this.startTime,
     this.endTime,
-    required this.ringingDurationSeconds,
-    required this.activeDurationSeconds,
-    required this.classification,
-    required this.direction,
     this.notes,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();

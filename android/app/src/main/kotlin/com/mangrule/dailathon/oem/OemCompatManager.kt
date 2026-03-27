@@ -84,7 +84,7 @@ object OemCompatManager {
                 // Fallback for newer Samsung devices
                 Intent(Intent.ACTION_MAIN).apply {
                     setClassName("com.android.settings",
-                        "com.android.settings.Settings$BatteryUsageSummaryActivity")
+                        "com.android.settings.Settings\$BatteryUsageSummaryActivity")
                 }
             } catch (e2: Exception) {
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -185,7 +185,7 @@ object OemCompatManager {
                     // Alternative: Realme Settings > App Management
                     Intent().apply {
                         setClassName("com.android.settings",
-                            "com.android.settings.Settings$ApplicationsActivity")
+                            "com.android.settings.Settings\$ApplicationsActivity")
                     }
                 } catch (e3: Exception) {
                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -219,7 +219,7 @@ object OemCompatManager {
                     // Alternative: OriginOS settings
                     Intent().apply {
                         setClassName("com.android.settings",
-                            "com.android.settings.Settings$AppsActivity")
+                            "com.android.settings.Settings\$AppsActivity")
                     }
                 } catch (e3: Exception) {
                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {

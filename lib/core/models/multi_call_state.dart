@@ -3,9 +3,13 @@ import 'call_info.dart';
 
 /// Represents the state of multiple calls (active + held + waiting).
 class MultiCallState extends Equatable {
+  const MultiCallState({
+    this.activeCall,
+    this.heldCall,
+    this.waitingCall,
+  });
 
-  factory MultiCallState.fromMap(Map<String, dynamic> map) {
-    return MultiCallState(
+  factory MultiCallState.fromMap(Map<String, dynamic> map) => MultiCallState(
       activeCall: map['activeCall'] != null 
           ? CallInfo.fromMap(Map<String, dynamic>.from(map['activeCall'] as Map))
           : null,
@@ -16,12 +20,6 @@ class MultiCallState extends Equatable {
           ? CallInfo.fromMap(Map<String, dynamic>.from(map['waitingCall'] as Map))
           : null,
     );
-  }
-  const MultiCallState({
-    this.activeCall,
-    this.heldCall,
-    this.waitingCall,
-  });
 
   final CallInfo? activeCall;
   final CallInfo? heldCall;

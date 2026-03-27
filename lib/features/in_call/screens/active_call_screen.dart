@@ -9,8 +9,7 @@ import 'package:dailathon_dialer/core/models/call_info.dart';
 class ActiveCallScreen extends StatefulWidget {
 
   const ActiveCallScreen({
-    Key? key,
-    required this.callInfo,
+    required this.callInfo, Key? key,
   }) : super(key: key);
   final CallInfo callInfo;
 
@@ -53,7 +52,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
             child: Column(
               children: [
                 // Call waiting banner at the top
-                if (hasWaitingCall && state is InCallActive)
+                if (hasWaitingCall)
                   CallWaitingBanner(
                     waitingCall: state.waitingCall!,
                     onAnswerAndHold: () {
@@ -79,7 +78,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
 
                 // Header with elapsed time and close
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -155,7 +154,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
 
                 // Call controls
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Column(
                     children: [
                       // Row 1: Mute, Speaker, Bluetooth
@@ -265,13 +264,13 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                 // DTMF Keypad (if visible)
                 if (_showKeypad)
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: _buildDtmfKeypad(),
                   ),
 
                 // End call button
                 Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(24),
                   child: FloatingActionButton.extended(
                     onPressed: () {
                       context.read<InCallBloc>().add(const CallEnded());

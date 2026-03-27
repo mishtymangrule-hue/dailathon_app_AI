@@ -71,15 +71,15 @@ class CrmReportingService {
           unansweredReason = UnansweredReason.noAnswer;
           break;
         default:
-          final active = (raw['activeDurationSeconds'] as int? ?? 0);
+          final active = raw['activeDurationSeconds'] as int? ?? 0;
           status = active > 0 ? CallStatus.answered : CallStatus.unanswered;
           unansweredReason =
               active > 0 ? null : UnansweredReason.noAnswer;
       }
 
       // Lookup CRM contact + attempt count
-      String? contactId = raw['contactId'] as String?;
-      int attemptCount = 0;
+      var contactId = raw['contactId'] as String?;
+      var attemptCount = 0;
       if (contactId != null) {
         attemptCount = await _crm.getAttemptCount(contactId);
       }

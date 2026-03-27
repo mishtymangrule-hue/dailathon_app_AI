@@ -1,3 +1,5 @@
+import 'package:dailathon_dialer/features/in_call/screens/active_call_screen.dart' show ActiveCallScreen;
+import 'package:dailathon_dialer/features/in_call/screens/screens.dart' show ActiveCallScreen;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -208,7 +210,7 @@ class _SyncDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<T>(
-        value: selected,
+        initialValue: selected,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),

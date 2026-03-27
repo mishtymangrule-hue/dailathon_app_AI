@@ -1,6 +1,7 @@
 package com.mangrule.dailathon.telecom
 
 import android.telecom.Call
+import android.telecom.CallAudioState
 import android.telecom.InCallService
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -105,9 +106,6 @@ class DialerInCallService : InCallService() {
                     Timber.d("DialerInCallService: conferenceable calls changed (${conferenceableCalls.size})")
                 }
 
-                override fun onConed(call: Call, conferenceCall: Call) {
-                    Timber.d("DialerInCallService: call coned into conference")
-                }
 
                 override fun onCallDestroyed(call: Call) {
                     Timber.d("DialerInCallService: call destroyed")
@@ -115,6 +113,7 @@ class DialerInCallService : InCallService() {
                 }
             }
         )
+    }
 
     override fun onCallRemoved(call: Call) {
         super.onCallRemoved(call)
@@ -131,7 +130,7 @@ class DialerInCallService : InCallService() {
         super.onCallAudioStateChanged(state)
         Timber.d(
             "DialerInCallService.onCallAudioStateChanged: " +
-                    "route=${state?.route}, bluetooth=${state?.bluetoothAudioConnected}"
+                    "route=${state?.route}"
         )
         // TODO: Sync audio routing to Flutter
     }
@@ -329,7 +328,7 @@ class DialerInCallService : InCallService() {
                     state = callState,
                     duration = 0.seconds,
                     isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING,
-                    isMuted = call.details.isMuted,
+                    isMuted = false,
                     isBluetoothAudio = false,
                     isSpeakerEnabled = false,
                     isHeld = call.state == Call.STATE_HOLDING,

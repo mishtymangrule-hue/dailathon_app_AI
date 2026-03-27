@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/home_bloc.dart';
+import '../../notifications/bloc/notifications_bloc.dart';
 
 /// HomeScreen displays available modules/features for the user to select.
 /// Shows Admission Calling and Telegram Calling modules.
@@ -26,9 +27,25 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Dailathon Dialer'),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          BlocBuilder<NotificationsBloc, NotificationsState>(
+            builder: (context, state) {
+              final count =
+                  state is NotificationsLoaded ? state.unreadCount : 0;
+              return Badge(
+                isLabelVisible: count > 0,
+                label: Text('$count'),
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () => context.push('/notifications'),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -42,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
                           Icon(
@@ -77,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
                           Icon(

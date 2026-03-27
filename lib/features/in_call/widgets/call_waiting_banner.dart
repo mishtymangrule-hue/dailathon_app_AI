@@ -6,11 +6,7 @@ import 'package:dailathon_dialer/core/models/call_info.dart';
 class CallWaitingBanner extends StatelessWidget {
 
   const CallWaitingBanner({
-    Key? key,
-    required this.waitingCall,
-    required this.onAnswerAndHold,
-    required this.onAnswerAndEnd,
-    required this.onDecline,
+    required this.waitingCall, required this.onAnswerAndHold, required this.onAnswerAndEnd, required this.onDecline, Key? key,
   }) : super(key: key);
   final CallInfo waitingCall;
   final VoidCallback onAnswerAndHold;
@@ -40,7 +36,7 @@ class CallWaitingBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Incoming call",
+                      'Incoming call',
                       style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                     Text(
@@ -64,19 +60,19 @@ class CallWaitingBanner extends StatelessWidget {
             children: [
               _ActionButton(
                 icon: Icons.pause,
-                label: "Hold",
+                label: 'Hold',
                 color: Colors.blue,
                 onTap: onAnswerAndHold,
               ),
               _ActionButton(
                 icon: Icons.call_end,
-                label: "End",
+                label: 'End',
                 color: Colors.orange,
                 onTap: onAnswerAndEnd,
               ),
               _ActionButton(
                 icon: Icons.close,
-                label: "Decline",
+                label: 'Decline',
                 color: Colors.red,
                 onTap: onDecline,
               ),

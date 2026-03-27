@@ -1,12 +1,9 @@
 package com.mangrule.dailathon.telecom
 
-import android.content.Context
-import android.net.Uri
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.ConnectionService
 import android.telecom.PhoneAccountHandle
-import android.telecom.TelecomManager
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
@@ -80,18 +77,6 @@ class DialerConnectionService : ConnectionService() {
         return connection
     }
 
-    /**
-     * Called when creating a conference connection (call merge).
-     */
-    override fun onCreateConference(
-        connectionManagerPhoneAccount: PhoneAccountHandle,
-        request: android.telecom.ConferenceRequest,
-    ): android.telecom.Conference {
-        Timber.d("onCreateConference: ${request.conferenceParticipants.size} participants")
-
-        val conference = DialerConference(applicationContext, connectionManagerPhoneAccount)
-        return conference
-    }
 
     /**
      * Called for new incoming calls.
@@ -132,19 +117,6 @@ class DialerConnectionService : ConnectionService() {
         return connection
     }
 
-    /**
-     * Called for unmanaged incoming calls (calls not through Telecom).
-     * Less commonly invoked but provides fallback handling.
-     */
-    override fun onCreateUnknownConnection(
-        connectionManagerPhoneAccount: PhoneAccountHandle,
-        request: ConnectionRequest,
-    ): Connection {
-        Timber.d("onCreateUnknownConnection: address=${request.address}")
-
-        // Treat as incoming call
-        return onCreateIncomingConnection(connectionManagerPhoneAccount, request)
-    }
 
     // ========== CONNECTION MANAGEMENT ==========
 
@@ -168,7 +140,7 @@ class DialerConnectionService : ConnectionService() {
         return activeConnections[callId]
     }
 
-    fun getAllConnections(): List<DialerConnection> {
+    fun getTrackedConnections(): List<DialerConnection> {
         return activeConnections.values.toList()
     }
 
@@ -184,13 +156,4 @@ class DialerConnectionService : ConnectionService() {
         return null
     }
 
-    override fun onBindings() {
-        super.onBindings()
-        Timber.d("DialerConnectionService.onBindings")
-    }
-
-    override fun onUnbindings() {
-        super.onUnbindings()
-        Timber.d("DialerConnectionService.onUnbindings")
-    }
 }

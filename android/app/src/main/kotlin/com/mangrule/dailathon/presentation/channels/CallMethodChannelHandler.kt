@@ -8,17 +8,16 @@ import android.os.Looper
 import android.telecom.TelecomManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import timber.log.Timber
-import com.mangrule.dailathon.domain.managers.PhoneAccountManager
-import com.mangrule.dailathon.domain.managers.AudioRouter
-import com.mangrule.dailathon.domain.managers.CallVibrationManager
-import com.mangrule.dailathon.domain.managers.OemCompatManager
-import com.mangrule.dailathon.domain.managers.SimManager
-import com.mangrule.dailathon.domain.managers.CallForwardingManager
+import com.mangrule.dailathon.telecom.PhoneAccountManager
+import com.mangrule.dailathon.audio.AudioRouter
+import com.mangrule.dailathon.vibration.CallVibrationManager
+import com.mangrule.dailathon.multisim.SimManager
+import com.mangrule.dailathon.forwarding.CallForwardingManager
 import com.mangrule.dailathon.domain.managers.CallOperationsManager
 import com.mangrule.dailathon.domain.managers.UssdManager
-import com.mangrule.dailathon.telecom.DialerInCallService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,7 +32,6 @@ class CallMethodChannelHandler @Inject constructor(
   private val phoneAccountManager: PhoneAccountManager,
   private val audioRouter: AudioRouter,
   private val callVibrationManager: CallVibrationManager,
-  private val oemCompatManager: OemCompatManager,
   private val simManager: SimManager,
   private val callForwardingManager: CallForwardingManager,
   private val callOperationsManager: CallOperationsManager,
@@ -92,7 +90,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleDial(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleDial(call: MethodCall, result: MethodChannel.Result) {
     val number = call.argument<String>("number") ?: run {
       result.error("INVALID_ARGS", "Phone number is required", null)
       return
@@ -122,7 +120,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleAnswer(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleAnswer(call: MethodCall, result: MethodChannel.Result) {
     try {
       val callId = call.argument<String>("callId")
       callOperationsManager.answerCall(callId)
@@ -134,7 +132,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleHangUp(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleHangUp(call: MethodCall, result: MethodChannel.Result) {
     try {
       val callId = call.argument<String>("callId")
       callOperationsManager.hangUpCall(callId)
@@ -146,7 +144,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleHold(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleHold(call: MethodCall, result: MethodChannel.Result) {
     try {
       val callId = call.argument<String>("callId")
       callOperationsManager.holdCall(callId)
@@ -158,7 +156,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleUnhold(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleUnhold(call: MethodCall, result: MethodChannel.Result) {
     try {
       val callId = call.argument<String>("callId")
       callOperationsManager.unholdCall(callId)
@@ -170,7 +168,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleMute(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleMute(call: MethodCall, result: MethodChannel.Result) {
     val isMuted = call.argument<Boolean>("isMuted") ?: false
     try {
       audioRouter.setMuted(isMuted)
@@ -182,7 +180,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSetSpeaker(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSetSpeaker(call: MethodCall, result: MethodChannel.Result) {
     val enabled = call.argument<Boolean>("enabled") ?: false
     try {
       audioRouter.setSpeakerPhoneOn(enabled)
@@ -194,7 +192,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSetBluetoothAudio(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSetBluetoothAudio(call: MethodCall, result: MethodChannel.Result) {
     val enabled = call.argument<Boolean>("enabled") ?: false
     try {
       audioRouter.setBluetoothScoOn(enabled)
@@ -206,7 +204,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleGetAvailableAudioRoutes(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleGetAvailableAudioRoutes(call: MethodCall, result: MethodChannel.Result) {
     try {
       val routes = audioRouter.getAvailableRoutes()
       Timber.v("Get available audio routes: $routes")
@@ -217,7 +215,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSendDtmf(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSendDtmf(call: MethodCall, result: MethodChannel.Result) {
     val digit = call.argument<String>("digit") ?: run {
       result.error("INVALID_ARGS", "DTMF digit is required", null)
       return
@@ -232,7 +230,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleMergeActiveCalls(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleMergeActiveCalls(call: MethodCall, result: MethodChannel.Result) {
     try {
       callOperationsManager.mergeActiveCalls()
       Timber.v("Merge calls requested from Flutter")
@@ -243,7 +241,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSwapCalls(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSwapCalls(call: MethodCall, result: MethodChannel.Result) {
     try {
       callOperationsManager.swapActiveCalls()
       Timber.v("Swap calls requested from Flutter")
@@ -254,24 +252,22 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSetCallForwarding(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
-    val reason = call.argument<String>("reason") ?: run {
-      result.error("INVALID_ARGS", "Reason is required", null)
-      return
-    }
-    val number = call.argument<String>("number") ?: run {
-      result.error("INVALID_ARGS", "Number is required", null)
-      return
-    }
+  private fun handleSetCallForwarding(call: MethodCall, result: MethodChannel.Result) {
+    val reasonLabel = call.argument<String>("reason") ?: "unconditional"
+    val number = call.argument<String>("number")
     val enable = call.argument<Boolean>("enable") ?: true
 
+    val reason = when (reasonLabel) {
+      "unconditional" -> 0
+      "busy" -> 1
+      "noAnswer" -> 2
+      "unreachable" -> 3
+      else -> 0
+    }
+
     try {
-      callForwardingManager.setForwarding(
-        reason = reason,
-        number = number,
-        enable = enable,
-      )
-      Timber.v("Set call forwarding: reason=$reason, number=$number, enable=$enable")
+      callForwardingManager.setForwarding(enabled = enable, number = number, reason = reason)
+      Timber.v("Set call forwarding: reason=$reasonLabel, number=$number, enable=$enable")
       result.success(null)
     } catch (e: Exception) {
       Timber.e(e, "Failed to set call forwarding")
@@ -279,24 +275,18 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleGetPhoneAccounts(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleGetPhoneAccounts(call: MethodCall, result: MethodChannel.Result) {
     try {
-      val accounts = mutableListOf<Map<String, Any>>()
-      val simCount = simManager.getSimCount()
-      
-      for (slot in 0 until simCount) {
-        val handle = phoneAccountManager.getPhoneAccountHandle(slot)
-        if (handle != null) {
-          accounts.add(
-            mapOf(
-              "slot" to slot,
-              "displayName" to (phoneAccountManager.getPhoneAccountDisplayName(slot) ?: "SIM ${slot + 1}"),
-              "simOperatorName" to (simManager.getSimOperatorName(slot) ?: "Unknown"),
-            )
-          )
-        }
+      val accounts = simManager.getActiveSimSlots().map { sim ->
+        mapOf(
+          "slot" to sim.slotIndex,
+          "subscriptionId" to sim.subscriptionId,
+          "displayName" to sim.displayName,
+          "simOperatorName" to sim.displayName,
+          "hasPhoneAccount" to (phoneAccountManager.getPhoneAccountHandle(sim.subscriptionId) != null),
+        )
       }
-      
+
       Timber.v("Get phone accounts: ${accounts.size} accounts")
       result.success(accounts)
     } catch (e: Exception) {
@@ -305,23 +295,18 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSelectPhoneAccount(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSelectPhoneAccount(call: MethodCall, result: MethodChannel.Result) {
     val simSlot = call.argument<Int>("simSlot") ?: run {
       result.error("INVALID_ARGS", "SIM slot is required", null)
       return
     }
 
-    try {
-      phoneAccountManager.setDefaultOutgoingAccount(simSlot)
-      Timber.v("Selected phone account for SIM $simSlot")
-      result.success(null)
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to select phone account")
-      result.error("SELECT_ACCOUNT_ERROR", e.message, null)
-    }
+    // System default outgoing account selection is managed by Android settings UI.
+    Timber.v("Select phone account requested for SIM slot $simSlot")
+    result.success(null)
   }
 
-  private fun handleAcceptCall(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleAcceptCall(call: MethodCall, result: MethodChannel.Result) {
     val callId = call.argument<String>("callId") ?: run {
       result.error("INVALID_ARGS", "Call ID is required", null)
       return
@@ -337,7 +322,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleRejectCall(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleRejectCall(call: MethodCall, result: MethodChannel.Result) {
     val callId = call.argument<String>("callId")
 
     try {
@@ -350,7 +335,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleGetBlockedNumbers(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleGetBlockedNumbers(call: MethodCall, result: MethodChannel.Result) {
     try {
       // TODO: Query blocked numbers from repository
       Timber.v("Get blocked numbers")
@@ -361,7 +346,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleBlockNumber(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleBlockNumber(call: MethodCall, result: MethodChannel.Result) {
     val number = call.argument<String>("number") ?: run {
       result.error("INVALID_ARGS", "Phone number is required", null)
       return
@@ -377,7 +362,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleUnblockNumber(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleUnblockNumber(call: MethodCall, result: MethodChannel.Result) {
     val number = call.argument<String>("number") ?: run {
       result.error("INVALID_ARGS", "Phone number is required", null)
       return
@@ -393,7 +378,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleEnableCallForwarding(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleEnableCallForwarding(call: MethodCall, result: MethodChannel.Result) {
     val forwardingType = call.argument<String>("forwardingType") ?: run {
       result.error("INVALID_ARGS", "Forwarding type is required", null)
       return
@@ -425,7 +410,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleDisableCallForwarding(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleDisableCallForwarding(call: MethodCall, result: MethodChannel.Result) {
     val forwardingType = call.argument<String>("forwardingType") ?: run {
       result.error("INVALID_ARGS", "Forwarding type is required", null)
       return
@@ -453,7 +438,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleCheckDefaultDialer(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleCheckDefaultDialer(call: MethodCall, result: MethodChannel.Result) {
     try {
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
       val defaultDialerPackage = telecomManager.defaultDialerPackage
@@ -467,7 +452,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSetDefaultDialer(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSetDefaultDialer(call: MethodCall, result: MethodChannel.Result) {
     try {
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
       
@@ -489,7 +474,7 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 
-  private fun handleSendUssd(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+  private fun handleSendUssd(call: MethodCall, result: MethodChannel.Result) {
     val code = call.argument<String>("code") ?: run {
       result.error("INVALID_ARGS", "USSD code is required", null)
       return
@@ -523,3 +508,4 @@ class CallMethodChannelHandler @Inject constructor(
     }
   }
 }
+

@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 class ResponseListScreen extends StatelessWidget {
 
   const ResponseListScreen({
-    Key? key,
-    required this.degreeId,
+    required this.degreeId, Key? key,
     this.degreeName,
   }) : super(key: key);
   final String degreeId;
@@ -101,7 +100,7 @@ class _ResponseCategoryTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               CircleAvatar(

@@ -36,7 +36,7 @@ class NotificationSyncService {
       }
 
       final raw = await _crm.getScheduledNotifications(employeeId);
-      final notifications = raw.map((json) => AppNotification.fromJson(json)).toList();
+      final notifications = raw.map(AppNotification.fromJson).toList();
 
       await _repo.upsertAll(notifications);
       // Prune items older than 30 days

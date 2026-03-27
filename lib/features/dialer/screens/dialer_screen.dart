@@ -14,8 +14,6 @@ class DialerScreen extends StatefulWidget {
 }
 
 class _DialerScreenState extends State<DialerScreen> {
-  static const _platform = MethodChannel('com.mangrule.dailathon/call_commands');
-
   // Trigger haptic feedback on dialpad key press
   Future<void> _triggerHaptic() async {
     try {
@@ -47,7 +45,7 @@ class _DialerScreenState extends State<DialerScreen> {
               // Number Display Box
               Container(
                 color: Colors.grey.shade100,
-                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: [
                     // Current Number
@@ -63,14 +61,14 @@ class _DialerScreenState extends State<DialerScreen> {
                     // SIM Selector (multi-SIM only)
                     if (activeState.availableSims.length > 1)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
                             activeState.availableSims.length,
                             (index) => Padding(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 4.0),
+                                  const EdgeInsets.symmetric(horizontal: 4),
                               child: FilterChip(
                                 label: Text('SIM ${index + 1}'),
                                 selected:
@@ -92,7 +90,7 @@ class _DialerScreenState extends State<DialerScreen> {
               // T9 Search Suggestions
               if (activeState.contactSuggestions.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -135,7 +133,7 @@ class _DialerScreenState extends State<DialerScreen> {
               // Dialpad
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   child: Dialpad(
                     onDigitPressed: (digit) async {
                       // Haptic feedback on key press (fast)
@@ -173,7 +171,7 @@ class _DialerScreenState extends State<DialerScreen> {
               ),
               // Call Button
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: FloatingActionButton.extended(
                   onPressed: activeState.currentNumber.isEmpty
                       ? null

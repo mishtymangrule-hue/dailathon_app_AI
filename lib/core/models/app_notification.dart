@@ -29,7 +29,7 @@ class AppNotification extends Equatable {
             ? DateTime.parse(json['deliveredAt'] as String)
             : null,
         status: NotificationStatus.values.byName(
-            (json['status'] as String? ?? 'pending')),
+            json['status'] as String? ?? 'pending'),
         studentId: json['studentId'] as String?,
         phoneNumber: json['phoneNumber'] as String?,
         contactName: json['contactName'] as String?,

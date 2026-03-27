@@ -5,9 +5,8 @@ class ContactDetail extends Equatable {
   const ContactDetail({
     required this.contactId,
     required this.displayName,
-    this.photoUri,
+    required this.phoneNumbers, this.photoUri,
     this.organization,
-    required this.phoneNumbers,
   });
   final String contactId;
   final String displayName;

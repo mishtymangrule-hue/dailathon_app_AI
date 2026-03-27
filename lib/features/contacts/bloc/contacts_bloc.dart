@@ -1,5 +1,5 @@
-import 'package:dailathon_dialer/core/models/contact.dart';
 import 'package:dailathon_dialer/core/channels/contacts_method_channel.dart';
+import 'package:dailathon_dialer/core/models/contact.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

@@ -145,5 +145,5 @@ class PermissionManager {
   }
 
   /// Check if POST_NOTIFICATIONS permission is available (Android 13+).
-  static Future<bool> shouldRequestNotificationPermission() async => await _isApi33OrAbove();
+  static Future<bool> shouldRequestNotificationPermission() async => _isApi33OrAbove();
 }

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import 'core/models/call_info.dart';
-import 'features/home/screens/home_screen.dart';
-import 'features/dialer/screens/dialer_screen.dart';
-import 'features/in_call/screens/screens.dart';
-import 'features/call_log/screens/recents_screen.dart';
-import 'features/contacts/screens/contacts_screen.dart';
 import 'features/admission_calling/screens/degree_list_screen.dart';
 import 'features/admission_calling/screens/response_list_screen.dart';
-import 'features/admission_calling/screens/sub_response_list_screen.dart';
 import 'features/admission_calling/screens/student_list_screen.dart';
-import 'features/settings/screens/settings_screen.dart';
+import 'features/admission_calling/screens/sub_response_list_screen.dart';
+import 'features/call_log/screens/recents_screen.dart';
+import 'features/contacts/screens/contacts_screen.dart';
+import 'features/dialer/screens/dialer_screen.dart';
+import 'features/home/screens/home_screen.dart';
+import 'features/in_call/screens/screens.dart';
 import 'features/notifications/screens/notification_centre_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',

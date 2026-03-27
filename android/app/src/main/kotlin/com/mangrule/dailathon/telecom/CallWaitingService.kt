@@ -7,6 +7,7 @@ import javax.inject.Inject
 import com.mangrule.dailathon.presentation.channels.CallEventChannelService
 import com.mangrule.dailathon.core.models.CallInfo
 import com.mangrule.dailathon.core.models.CallState
+import android.telecom.VideoProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,9 +66,9 @@ class CallWaitingService @Inject constructor(
         this.ringingCall = incomingCall
 
         val activeNumber = activeCall.details.handle?.schemeSpecificPart ?: "Unknown"
-        val activeName = activeCall.details.displayName ?: activeNumber
+        val activeName = activeCall.details.callerDisplayName?.toString() ?: activeNumber
         val incomingNumber = incomingCall.details.handle?.schemeSpecificPart ?: "Unknown"
-        val incomingName = incomingCall.details.displayName ?: incomingNumber
+        val incomingName = incomingCall.details.callerDisplayName?.toString() ?: incomingNumber
 
         // Create call waiting state
         val state = CallWaitingState(
@@ -84,18 +85,17 @@ class CallWaitingService @Inject constructor(
         // Build CallInfo for Flutter
         val callInfo = CallInfo(
             callId = incomingCall.details.handle?.toString() ?: "unknown",
-            phoneNumber = incomingNumber,
-            callerName = incomingName,
-            callState = CallState.CALL_WAITING,
-            duration = 0,
-            callType = "INCOMING_CALL_WAITING",
-            isRinging = true,
-            isActive = false,
-            isHeld = false,
+            number = incomingNumber,
+            state = CallState.RINGING,
+            duration = 0.milliseconds,
+            isOutgoing = false,
             isMuted = false,
-            isSpeakerOn = false,
-            isBluetoothActive = false,
-            capabilities = emptyList(),
+            isBluetoothAudio = false,
+            isSpeakerEnabled = false,
+            isHeld = false,
+            simSlot = 0,
+            callType = "call_waiting",
+            callerName = incomingName,
         )
 
         // Push to Flutter via EventChannel
@@ -115,7 +115,7 @@ class CallWaitingService @Inject constructor(
         Timber.d("CallWaitingService: Answering call waiting call")
         ringingCall = null
         
-        call.answer(Call.VIDEO_STATE_AUDIO_ONLY)
+        call.answer(VideoProfile.STATE_AUDIO_ONLY)
         updateState(isAnswered = true)
     }
 
@@ -170,7 +170,7 @@ class CallWaitingService @Inject constructor(
         activeCall.disconnect()
 
         // Answer waiting call
-        waitingCall.answer(Call.VIDEO_STATE_AUDIO_ONLY)
+        waitingCall.answer(VideoProfile.STATE_AUDIO_ONLY)
 
         updateState(isAnswered = true)
     }

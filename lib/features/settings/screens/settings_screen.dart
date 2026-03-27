@@ -51,8 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           centerTitle: true,
         ),
         body: BlocBuilder<SettingsBloc, SettingsState>(
-          builder: (context, state) {
-            return SingleChildScrollView(
+          builder: (context, state) => SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,8 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-            );
-          },
+            ),
         ),
       ),
     );
@@ -182,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 BlocBuilder<SettingsBloc, SettingsState>(
                   builder: (context, state) {
-                    bool isEnabled = false;
+                    var isEnabled = false;
                     if (state is SettingsLoaded) {
                       isEnabled = state.getForwardingEnabled(forwardingType);
                     }
@@ -210,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             BlocBuilder<SettingsBloc, SettingsState>(
               builder: (context, state) {
-                String number = '';
+                var number = '';
                 if (state is SettingsLoaded) {
                   number = state.getForwardingNumber(forwardingType) ?? '';
                 }

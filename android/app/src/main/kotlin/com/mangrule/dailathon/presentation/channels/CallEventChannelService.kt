@@ -10,13 +10,13 @@ import timber.log.Timber
 import com.mangrule.dailathon.core.models.CallInfo
 import com.mangrule.dailathon.core.models.CallState
 import com.mangrule.dailathon.core.models.toMap
-import com.mangrule.dailathon.presentation.services.DialerInCallService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableBroadcastChannel
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,8 +36,8 @@ class CallEventChannelService @Inject constructor(
   private var eventChannel: EventChannel? = null
   private var eventSink: EventChannel.EventSink? = null
 
-  // Broadcast channel for call state updates
-  private val callStateChannel = MutableBroadcastChannel<CallInfo>(capacity = 10)
+  // Shared flow for call state updates
+  private val callStateChannel = MutableSharedFlow<CallInfo>(extraBufferCapacity = 10)
 
   // Coroutine scope for lifecycle management
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -76,7 +76,7 @@ class CallEventChannelService @Inject constructor(
 
         // Also broadcast internally for other subscribers
         scope.launch {
-          callStateChannel.send(callInfo)
+          callStateChannel.emit(callInfo)
         }
       } catch (e: Exception) {
         Timber.e(e, "Error pushing call state update")
@@ -103,7 +103,7 @@ class CallEventChannelService @Inject constructor(
    * Get the call state update stream for internal subscribers.
    * Used by BLoCs or other components listening to call changes.
    */
-  fun getCallStateUpdatesFlow() = callStateChannel.asFlow()
+  fun getCallStateUpdatesFlow() = callStateChannel.asSharedFlow()
 
   private fun startListeningToCallUpdates() {
     scope.launch {
@@ -138,8 +138,7 @@ class CallEventChannelService @Inject constructor(
    */
   fun dispose() {
     try {
-      callStateChannel.close()
-      scope.coroutineContext.cancel()
+      scope.cancel()
       Timber.v("CallEventChannelService disposed")
     } catch (e: Exception) {
       Timber.e(e, "Error disposing CallEventChannelService")

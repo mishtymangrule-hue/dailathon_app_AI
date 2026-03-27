@@ -13,8 +13,7 @@ class CrmContact {
     this.customFields,
   });
 
-  factory CrmContact.fromJson(Map<String, dynamic> json) {
-    return CrmContact(
+  factory CrmContact.fromJson(Map<String, dynamic> json) => CrmContact(
       id: json['id'] as String,
       name: json['name'] as String,
       phoneNumber: json['phoneNumber'] as String,
@@ -23,7 +22,6 @@ class CrmContact {
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
       customFields: json['customFields'] as Map<String, dynamic>?,
     );
-  }
   final String id;
   final String name;
   final String phoneNumber;
@@ -56,8 +54,7 @@ class CrmCall {
     this.notes,
   });
 
-  factory CrmCall.fromJson(Map<String, dynamic> json) {
-    return CrmCall(
+  factory CrmCall.fromJson(Map<String, dynamic> json) => CrmCall(
       id: json['id'] as String,
       contactId: json['contactId'] as String,
       phoneNumber: json['phoneNumber'] as String,
@@ -67,7 +64,6 @@ class CrmCall {
       status: json['status'] as String,
       notes: json['notes'] as String?,
     );
-  }
   final String id;
   final String contactId;
   final String phoneNumber;

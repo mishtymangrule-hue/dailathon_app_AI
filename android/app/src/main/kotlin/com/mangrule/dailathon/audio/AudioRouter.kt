@@ -145,7 +145,7 @@ class AudioRouter @Inject constructor(
         }
       } ?: availableDevices.firstOrNull { device ->
         // Earpiece (BUILTIN_RECEIVER) is third
-        device.type == AudioDeviceInfo.TYPE_BUILTIN_RECEIVER
+        device.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
       } ?: availableDevices.firstOrNull { device ->
         // Speaker is last resort
         device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
@@ -167,14 +167,14 @@ class AudioRouter @Inject constructor(
    */
   private fun getAvailableAudioDevices(): List<AudioDeviceInfo> {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      audioManager.devices
+      audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         .filter { device ->
           device.isSink && (
             device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
               device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
               device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
               device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-              device.type == AudioDeviceInfo.TYPE_BUILTIN_RECEIVER ||
+              device.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE ||
               device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER ||
               device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE
             )
@@ -186,7 +186,7 @@ class AudioRouter @Inject constructor(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> 1
             AudioDeviceInfo.TYPE_WIRED_HEADSET -> 2
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> 3
-            AudioDeviceInfo.TYPE_BUILTIN_RECEIVER -> 4
+            AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> 4
             AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE -> 5
             AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> 6
             else -> 99
@@ -205,7 +205,7 @@ class AudioRouter @Inject constructor(
       currentAudioDevice = device
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        audioManager.communicationDevice = device
+        audioManager.setCommunicationDevice(device)
         Timber.v("AudioRouter: set communication device: ${device.productName} (${getDeviceTypeName(device.type)})")
       } else {
         // Fallback for API 21-27
@@ -378,7 +378,7 @@ class AudioRouter @Inject constructor(
       AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth A2DP"
       AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Wired Headset"
       AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Wired Headphones"
-      AudioDeviceInfo.TYPE_BUILTIN_RECEIVER -> "Earpiece"
+      AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "Earpiece"
       AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Speaker"
       AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE -> "Speaker (Safe)"
       else -> "Unknown ($type)"
@@ -414,7 +414,7 @@ class AudioRouter @Inject constructor(
           AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> {
             if (!routes.contains("wired_headset")) routes.add("wired_headset")
           }
-          AudioDeviceInfo.TYPE_BUILTIN_RECEIVER -> {
+          AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> {
             if (!routes.contains("earpiece")) routes.add("earpiece")
           }
           AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
@@ -432,3 +432,4 @@ class AudioRouter @Inject constructor(
     }
   }
 }
+

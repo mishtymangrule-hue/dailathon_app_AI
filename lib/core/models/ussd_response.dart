@@ -5,21 +5,6 @@ import 'package:equatable/equatable.dart';
 /// Contains information about whether the USSD request was successful,
 /// the response text, and any error details if applicable.
 class UssdResponse extends Equatable {
-
-  /// Create a UssdResponse from a Map.
-  factory UssdResponse.fromMap(Map<String, dynamic> map) {
-    return UssdResponse(
-      success: map['success'] ?? false,
-      code: map['code'] ?? '',
-      response: map['response'],
-      failureCode: map['failureCode'],
-      message: map['message'],
-      timestamp: map['timestamp'],
-      type: map['type'] ?? 'ussd',
-      codeType: map['codeType'],
-      result: map['result'],
-    );
-  }
   const UssdResponse({
     required this.success,
     required this.code,
@@ -31,6 +16,19 @@ class UssdResponse extends Equatable {
     this.codeType,
     this.result,
   });
+
+  /// Create a UssdResponse from a Map.
+  factory UssdResponse.fromMap(Map<String, dynamic> map) => UssdResponse(
+      success: map['success'] ?? false,
+      code: map['code'] ?? '',
+      response: map['response'],
+      failureCode: map['failureCode'],
+      message: map['message'],
+      timestamp: map['timestamp'],
+      type: map['type'] ?? 'ussd',
+      codeType: map['codeType'],
+      result: map['result'],
+    );
 
   /// Whether the USSD request was successful.
   final bool success;

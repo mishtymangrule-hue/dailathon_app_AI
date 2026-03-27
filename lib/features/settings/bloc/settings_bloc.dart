@@ -19,6 +19,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SetDefaultDialerRequested>(_onSetDefaultDialerRequested);
   }
 
+  // ignore: unused_field
   final CallForwardingRepository _callForwardingRepository;
   final CallMethodChannel _callMethodChannel;
 

@@ -4,10 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.telecom.TelecomManager
 import android.telephony.PhoneNumberUtils
-import android.telephony.TelephonyManager
 import timber.log.Timber
 
 object EmergencyCallManager {
@@ -34,13 +32,9 @@ object EmergencyCallManager {
 
     fun isEmergencyNumber(number: String): Boolean {
         val normalised = number.trimStart('+').replace(Regex("[^0-9]"), "")
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            TelephonyManager.isEmergencyNumber(normalised)
-        } else {
-            @Suppress("DEPRECATION")
-            PhoneNumberUtils.isEmergencyNumber(normalised) ||
-                    normalised in HARDCODED_EMERGENCY_NUMBERS
-        }
+        @Suppress("DEPRECATION")
+        return PhoneNumberUtils.isEmergencyNumber(normalised) ||
+            normalised in HARDCODED_EMERGENCY_NUMBERS
     }
 
     fun placeEmergencyCall(context: Context, number: String) {
@@ -57,13 +51,13 @@ object EmergencyCallManager {
             Timber.w("TelecomManager failed (CALL_PHONE not granted), trying fallbacks")
         }
 
-        // Fallback: ACTION_CALL_PRIVILEGED
+        // Fallback: ACTION_CALL
         try {
             context.startActivity(
-                Intent(Intent.ACTION_CALL_PRIVILEGED, uri)
+                Intent(Intent.ACTION_CALL, uri)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
-            Timber.v("Emergency call placed via ACTION_CALL_PRIVILEGED: $number")
+            Timber.v("Emergency call placed via ACTION_CALL: $number")
             return
         } catch (_: ActivityNotFoundException) {}
 

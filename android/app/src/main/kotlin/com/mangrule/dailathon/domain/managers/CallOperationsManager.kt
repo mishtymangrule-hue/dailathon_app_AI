@@ -1,8 +1,9 @@
 package com.mangrule.dailathon.domain.managers
 
 import android.telecom.Call
+import android.telecom.VideoProfile
 import timber.log.Timber
-import com.mangrule.dailathon.presentation.services.DialerInCallService
+import com.mangrule.dailathon.telecom.DialerInCallService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +27,7 @@ class CallOperationsManager @Inject constructor() {
         }
 
         if (call != null) {
-          call.answer(Call.STATE_AUDIO_PROCESS)
+          call.answer(VideoProfile.STATE_AUDIO_ONLY)
           Timber.v("Answered call: $callId")
         } else {
           Timber.w("No ringing call found to answer")
@@ -195,6 +196,21 @@ class CallOperationsManager @Inject constructor() {
       }
     } catch (e: Exception) {
       Timber.e(e, "Error rejecting call")
+      throw e
+    }
+  }
+
+  fun muteCall(callId: String? = null, isMuted: Boolean = true) {
+    try {
+      val service = DialerInCallService.getInstance()
+      if (service != null) {
+        service.setMuted(isMuted)
+        Timber.v("Set mute=$isMuted for call: $callId")
+      } else {
+        Timber.w("No active InCallService found to mute")
+      }
+    } catch (e: Exception) {
+      Timber.e(e, "Error muting call")
       throw e
     }
   }

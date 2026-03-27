@@ -16,9 +16,7 @@ class CallSyncFormReady extends CallSyncState {
   const CallSyncFormReady({
     required this.callId,
     required this.phoneNumber,
-    this.contactId,
-    required this.degrees,
-    required this.responses,
+    required this.degrees, required this.responses, this.contactId,
     this.selectedDegree,
     this.availablePrograms = const [],
     this.selectedProgram,

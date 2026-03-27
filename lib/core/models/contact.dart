@@ -1,16 +1,6 @@
 import 'package:equatable/equatable.dart';
 
 class Contact extends Equatable {
-
-  factory Contact.fromMap(Map<String, dynamic> map) {
-    return Contact(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
-      photoUri: map['photoUri'],
-      isBlocked: map['isBlocked'] ?? false,
-    );
-  }
   const Contact({
     required this.id,
     required this.name,
@@ -18,6 +8,14 @@ class Contact extends Equatable {
     this.photoUri,
     this.isBlocked = false,
   });
+
+  factory Contact.fromMap(Map<String, dynamic> map) => Contact(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      photoUri: map['photoUri'],
+      isBlocked: map['isBlocked'] ?? false,
+    );
 
   final String id;
   final String name;
@@ -30,17 +28,6 @@ class Contact extends Equatable {
 }
 
 class CallLogEntry extends Equatable {
-
-  factory CallLogEntry.fromMap(Map<String, dynamic> map) {
-    return CallLogEntry(
-      id: map['id'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
-      name: map['name'] ?? '',
-      timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp'] ?? 0),
-      duration: map['duration'] ?? 0,
-      type: map['type'] ?? 'incoming',
-    );
-  }
   const CallLogEntry({
     required this.id,
     required this.phoneNumber,
@@ -49,6 +36,15 @@ class CallLogEntry extends Equatable {
     required this.duration,
     required this.type, // incoming, outgoing, missed
   });
+
+  factory CallLogEntry.fromMap(Map<String, dynamic> map) => CallLogEntry(
+      id: map['id'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      name: map['name'] ?? '',
+      timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp'] ?? 0),
+      duration: map['duration'] ?? 0,
+      type: map['type'] ?? 'incoming',
+    );
 
   final String id;
   final String phoneNumber;

@@ -4,9 +4,17 @@ import 'package:equatable/equatable.dart';
 /// Position 1 is reserved for voicemail.
 /// Positions 2-9 can be assigned to contacts for quick dialing.
 class SpeedDialEntry extends Equatable {
+  const SpeedDialEntry({
+    required this.position,      // 1-9
+    required this.contactId,
+    required this.displayName,
+    required this.phoneNumber,
+    this.photoUri,
+    this.createdAt,
+    this.updatedAt,
+  });
 
-  factory SpeedDialEntry.fromMap(Map<String, dynamic> map) {
-    return SpeedDialEntry(
+  factory SpeedDialEntry.fromMap(Map<String, dynamic> map) => SpeedDialEntry(
       position: map['position'] as int,
       contactId: map['contactId'] as String,
       displayName: map['displayName'] as String,
@@ -19,16 +27,6 @@ class SpeedDialEntry extends Equatable {
         ? DateTime.fromMillisecondsSinceEpoch(map['updatedAt'] as int)
         : null,
     );
-  }
-  const SpeedDialEntry({
-    required this.position,      // 1-9
-    required this.contactId,
-    required this.displayName,
-    required this.phoneNumber,
-    this.photoUri,
-    this.createdAt,
-    this.updatedAt,
-  });
 
   final int position;         // 1-9 (1 = voicemail)
   final String contactId;      // Contact ID from system
@@ -82,9 +80,15 @@ class SpeedDialEntry extends Equatable {
 
 /// Contact marked as favorite.
 class ContactFavorite extends Equatable {
+  const ContactFavorite({
+    required this.contactId,
+    required this.displayName,
+    required this.phoneNumber,
+    this.photoUri,
+    this.createdAt,
+  });
 
-  factory ContactFavorite.fromMap(Map<String, dynamic> map) {
-    return ContactFavorite(
+  factory ContactFavorite.fromMap(Map<String, dynamic> map) => ContactFavorite(
       contactId: map['contactId'] as String,
       displayName: map['displayName'] as String,
       phoneNumber: map['phoneNumber'] as String,
@@ -93,14 +97,6 @@ class ContactFavorite extends Equatable {
         ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int)
         : null,
     );
-  }
-  const ContactFavorite({
-    required this.contactId,
-    required this.displayName,
-    required this.phoneNumber,
-    this.photoUri,
-    this.createdAt,
-  });
 
   final String contactId;
   final String displayName;
