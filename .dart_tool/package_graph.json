@@ -35,6 +35,19 @@
       ]
     },
     {
+      "name": "flutter_keyboard_visibility",
+      "version": "6.0.0",
+      "dependencies": [
+        "flutter",
+        "flutter_keyboard_visibility_linux",
+        "flutter_keyboard_visibility_macos",
+        "flutter_keyboard_visibility_platform_interface",
+        "flutter_keyboard_visibility_web",
+        "flutter_keyboard_visibility_windows",
+        "meta"
+      ]
+    },
+    {
       "name": "mocktail",
       "version": "1.0.4",
       "dependencies": [
@@ -136,9 +149,12 @@
     },
     {
       "name": "workmanager",
-      "version": "0.5.2",
+      "version": "0.9.0+3",
       "dependencies": [
-        "flutter"
+        "flutter",
+        "workmanager_android",
+        "workmanager_apple",
+        "workmanager_platform_interface"
       ]
     },
     {
@@ -305,6 +321,53 @@
       ]
     },
     {
+      "name": "flutter_keyboard_visibility_windows",
+      "version": "1.0.0",
+      "dependencies": [
+        "flutter",
+        "flutter_keyboard_visibility_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_keyboard_visibility_web",
+      "version": "2.0.0",
+      "dependencies": [
+        "flutter",
+        "flutter_keyboard_visibility_platform_interface",
+        "flutter_web_plugins"
+      ]
+    },
+    {
+      "name": "flutter_keyboard_visibility_macos",
+      "version": "1.0.0",
+      "dependencies": [
+        "flutter",
+        "flutter_keyboard_visibility_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_keyboard_visibility_linux",
+      "version": "1.0.0",
+      "dependencies": [
+        "flutter",
+        "flutter_keyboard_visibility_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_keyboard_visibility_platform_interface",
+      "version": "2.0.0",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "meta",
+      "version": "1.17.0",
+      "dependencies": []
+    },
+    {
       "name": "test_api",
       "version": "0.7.10",
       "dependencies": [
@@ -365,11 +428,6 @@
         "webkit_inspection_protocol",
         "yaml"
       ]
-    },
-    {
-      "name": "meta",
-      "version": "1.17.0",
-      "dependencies": []
     },
     {
       "name": "diff_match_patch",
@@ -704,6 +762,31 @@
       ]
     },
     {
+      "name": "workmanager_apple",
+      "version": "0.9.1+2",
+      "dependencies": [
+        "flutter",
+        "workmanager_platform_interface"
+      ]
+    },
+    {
+      "name": "workmanager_android",
+      "version": "0.9.0+2",
+      "dependencies": [
+        "flutter",
+        "workmanager_platform_interface"
+      ]
+    },
+    {
+      "name": "workmanager_platform_interface",
+      "version": "0.9.1+1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
       "name": "sqflite_common",
       "version": "2.5.6",
       "dependencies": [
@@ -807,19 +890,6 @@
       "version": "0.9.3+7",
       "dependencies": [
         "flutter"
-      ]
-    },
-    {
-      "name": "flutter_keyboard_visibility",
-      "version": "5.4.1",
-      "dependencies": [
-        "flutter",
-        "flutter_keyboard_visibility_linux",
-        "flutter_keyboard_visibility_macos",
-        "flutter_keyboard_visibility_platform_interface",
-        "flutter_keyboard_visibility_web",
-        "flutter_keyboard_visibility_windows",
-        "meta"
       ]
     },
     {
@@ -1028,6 +1098,13 @@
       "dependencies": []
     },
     {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
       "name": "term_glyph",
       "version": "1.2.2",
       "dependencies": []
@@ -1202,58 +1279,9 @@
       "dependencies": []
     },
     {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "dependencies": [
-        "meta"
-      ]
-    },
-    {
       "name": "platform",
       "version": "3.1.6",
       "dependencies": []
-    },
-    {
-      "name": "flutter_keyboard_visibility_windows",
-      "version": "1.0.0",
-      "dependencies": [
-        "flutter",
-        "flutter_keyboard_visibility_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_keyboard_visibility_web",
-      "version": "2.0.0",
-      "dependencies": [
-        "flutter",
-        "flutter_keyboard_visibility_platform_interface",
-        "flutter_web_plugins"
-      ]
-    },
-    {
-      "name": "flutter_keyboard_visibility_macos",
-      "version": "1.0.0",
-      "dependencies": [
-        "flutter",
-        "flutter_keyboard_visibility_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_keyboard_visibility_linux",
-      "version": "1.0.0",
-      "dependencies": [
-        "flutter",
-        "flutter_keyboard_visibility_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_keyboard_visibility_platform_interface",
-      "version": "2.0.0",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "plugin_platform_interface"
-      ]
     },
     {
       "name": "win32",
