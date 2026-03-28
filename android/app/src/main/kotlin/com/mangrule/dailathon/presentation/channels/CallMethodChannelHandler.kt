@@ -1,10 +1,12 @@
 package com.mangrule.dailathon.presentation.channels
 
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.BlockedNumberContract
@@ -43,6 +45,7 @@ class CallMethodChannelHandler @Inject constructor(
 ) {
   companion object {
     private const val CHANNEL_NAME = "com.mangrule.dailathon/call_commands"
+    const val REQUEST_CODE_ROLE_DIALER = 1001
   }
 
   private val mainHandler = Handler(Looper.getMainLooper())
@@ -517,11 +520,16 @@ class CallMethodChannelHandler @Inject constructor(
 
   private fun handleCheckDefaultDialer(call: MethodCall, result: MethodChannel.Result) {
     try {
-      val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-      val defaultDialerPackage = telecomManager.defaultDialerPackage
-      val isDefault = defaultDialerPackage == context.packageName
-      
-      Timber.v("Check default dialer: $isDefault (current=$defaultDialerPackage)")
+      val isDefault = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // API 29+: RoleManager is the authoritative source on modern Android / MIUI
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        roleManager?.isRoleHeld(RoleManager.ROLE_DIALER) ?: false
+      } else {
+        // API < 29: fall back to TelecomManager
+        val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+        telecomManager.defaultDialerPackage == context.packageName
+      }
+      Timber.v("Check default dialer (RoleManager): $isDefault")
       result.success(isDefault)
     } catch (e: Exception) {
       Timber.e(e, "Failed to check default dialer")
@@ -531,21 +539,37 @@ class CallMethodChannelHandler @Inject constructor(
 
   private fun handleSetDefaultDialer(call: MethodCall, result: MethodChannel.Result) {
     try {
-      val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-      
-      val intent = Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
-        .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
       val activity = activityRef?.get()
-      if (activity != null && !activity.isFinishing) {
-        // Use Activity context — works on all OEMs including MIUI which blocks app-context launches
-        activity.startActivity(intent)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // API 29+: RoleManager intent — the ONLY path that works on MIUI Android 10+
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager == null) {
+          result.error("SET_DEFAULT_DIALER_ERROR", "RoleManager unavailable", null)
+          return
+        }
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
+        if (activity != null && !activity.isFinishing) {
+          // MIUI / HyperOS REQUIRES startActivityForResult — plain startActivity is silently ignored
+          @Suppress("DEPRECATION")
+          activity.startActivityForResult(intent, REQUEST_CODE_ROLE_DIALER)
+          Timber.v("Set default dialer via RoleManager startActivityForResult")
+        } else {
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          context.startActivity(intent)
+          Timber.v("Set default dialer via RoleManager (App context fallback)")
+        }
       } else {
-        // Fallback: application context requires NEW_TASK flag
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        // API < 29: legacy TelecomManager intent
+        val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+          .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
+        if (activity != null && !activity.isFinishing) {
+          activity.startActivity(intent)
+        } else {
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          context.startActivity(intent)
+        }
+        Timber.v("Set default dialer via ACTION_CHANGE_DEFAULT_DIALER")
       }
-      
-      Timber.v("Set default dialer requested")
       result.success(null)
     } catch (e: Exception) {
       Timber.e(e, "Failed to set default dialer")

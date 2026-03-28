@@ -73,9 +73,20 @@ class _DefaultDialerGateScreenState extends State<DefaultDialerGateScreen>
     setState(() => _requesting = true);
     try {
       await widget.channel.setDefaultDialer();
-    } catch (_) {}
+    } on Exception catch (e) {
+      // Surface the error so it's visible — silent failure is the wrong behavior here.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open default dialer dialog: $e'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
     // Re-check after a short delay to allow the system dialog to complete.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
     setState(() => _requesting = false);
     if (mounted) _check();
   }

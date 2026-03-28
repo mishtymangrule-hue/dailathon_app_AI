@@ -181,17 +181,10 @@ class _NumberDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
+      child: SizedBox(
         height: 80,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        decoration: BoxDecoration(
-          color: AppTheme.bg,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          boxShadow: AppTheme.insetShadow(),
-        ),
         child: Row(
           children: [
-            // Paste icon — always visible but only active
             GestureDetector(
               onTap: onPaste,
               behavior: HitTestBehavior.opaque,
@@ -206,22 +199,23 @@ class _NumberDisplay extends StatelessWidget {
                 duration: const Duration(milliseconds: 150),
                 transitionBuilder: (child, anim) =>
                     FadeTransition(opacity: anim, child: child),
-                child: Text(
-                  formatted.isEmpty ? '' : formatted,
+                child: FittedBox(
                   key: ValueKey(formatted),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: number.length > 10 ? 26 : 34,
-                    fontWeight: FontWeight.w300,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: 2.5,
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    formatted.isEmpty ? '' : formatted,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w300,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: 2.5,
+                    ),
                   ),
                 ),
               ),
             ),
-            // Spacer to balance the paste icon
             const SizedBox(width: 35),
           ],
         ),

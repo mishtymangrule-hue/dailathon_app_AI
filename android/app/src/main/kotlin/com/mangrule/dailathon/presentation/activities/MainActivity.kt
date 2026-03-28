@@ -80,6 +80,16 @@ class MainActivity : FlutterActivity() {
     callMethodChannelHandler.setActivity(this)
   }
 
+  @Suppress("DEPRECATION")
+  override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+    super.onActivityResult(requestCode, resultCode, data)
+    // Re-attach activity after the role dialog closes so subsequent checks work
+    if (requestCode == CallMethodChannelHandler.REQUEST_CODE_ROLE_DIALER) {
+      callMethodChannelHandler.setActivity(this)
+      Timber.v("RoleManager result: resultCode=$resultCode")
+    }
+  }
+
   override fun onPause() {
     callMethodChannelHandler.setActivity(null)
     super.onPause()

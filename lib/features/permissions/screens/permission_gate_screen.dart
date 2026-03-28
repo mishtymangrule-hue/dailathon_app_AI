@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
 
 /// Hard gate: the app cannot be used until every mandatory runtime permission
-/// is granted AND the app is exempted from battery optimization.
-/// Permissions are NEVER requested in-app â€” the user must enable them through
-/// device Settings. Dailathon blocks execution and directs to Settings if any
-/// required permission is missing.
-/// Call-forwarding and RECORD_AUDIO are intentionally excluded per spec.
+/// is granted AND battery optimization is disabled.
+///
+/// First launch: fires a consolidated system permission request for all
+/// mandatory permissions. User must grant all to proceed.
+/// Subsequent launches / resumes: silently checks status only. If any
+/// permission is missing, blocks the app and directs to device Settings.
+/// Permissions are never requestable from inside the app after onboarding.
 class PermissionGateScreen extends StatefulWidget {
   const PermissionGateScreen({super.key, required this.child});
   final Widget child;
@@ -20,7 +23,10 @@ class PermissionGateScreen extends StatefulWidget {
 class _PermissionGateScreenState extends State<PermissionGateScreen>
     with WidgetsBindingObserver {
 
-  //  Mandatory runtime permissions (per product spec)
+  // Key persisted across launches to track whether onboarding request was shown.
+  static const _kOnboardingKey = 'perm_onboarding_done';
+
+  // Mandatory runtime permissions (per product spec).
   // RECORD_AUDIO and call-forwarding intentionally excluded.
   static const _required = <Permission>[
     Permission.phone,                      // CALL_PHONE, READ_PHONE_STATE,
@@ -30,6 +36,10 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     Permission.ignoreBatteryOptimizations, // Keeps call services alive
   ];
 
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
   bool _checking = true;
   bool _allGranted = false;
   List<_PermEntry> _denied = [];
@@ -38,11 +48,9 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Use status-check only on init Ã¢â‚¬â€ no Activity required.
-    // The system permission dialog is triggered only from the user's tap,
-    // at which point the Activity is guaranteed to be attached.
+    // Defer so the Flutter Activity is fully attached before any permission call.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _checkOnly();
+      if (mounted) _initCheck();
     });
   }
 
@@ -60,6 +68,39 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
   }
 
   //  Permission logic 
+
+  /// Entry point: first launch requests all permissions; subsequent launches
+  /// only check status silently.
+  Future<void> _initCheck() async {
+    final done = await _storage.read(key: _kOnboardingKey);
+    if (done == 'true') {
+      _checkOnly();
+    } else {
+      _requestAll();
+    }
+  }
+
+  /// First-launch only: fire system permission dialogs for all required
+  /// permissions in sequence, then persist the onboarding flag.
+  Future<void> _requestAll() async {
+    if (!mounted) return;
+    setState(() { _checking = true; });
+    // Give the Android Activity time to attach to the permission plugin.
+    // Without this delay, permission_handler reports "Unable to detect Activity".
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    try {
+      final statuses = await _required.request();
+      // Mark onboarding done regardless of outcome — on denial the blocker
+      // screen will direct the user to Settings, not re-request in-app.
+      await _storage.write(key: _kOnboardingKey, value: 'true');
+      _evaluate(statuses);
+    } catch (_) {
+      // If request fails (e.g. Activity not ready), leave onboarding flag unset
+      // so it retries the request next launch, and silently check now.
+      if (mounted) _checkOnly();
+    }
+  }
 
   Future<void> _checkOnly() async {
     if (!mounted) return;
@@ -156,7 +197,6 @@ class _PermissionBlocker extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-              //  Header 
               Container(
                 width: 72,
                 height: 72,
@@ -188,7 +228,6 @@ class _PermissionBlocker extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              //  Permission cards 
               Expanded(
                 child: ListView.separated(
                   itemCount: denied.length,
@@ -197,7 +236,6 @@ class _PermissionBlocker extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              //  Open Settings button 
               _PrimaryButton(
                 label: 'Open App Settings',
                 icon: Icons.settings_rounded,
