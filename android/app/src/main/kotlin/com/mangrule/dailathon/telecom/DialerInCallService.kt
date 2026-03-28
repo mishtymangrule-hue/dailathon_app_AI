@@ -11,6 +11,10 @@ import com.mangrule.dailathon.core.models.CallInfo
 import com.mangrule.dailathon.core.models.CallState
 import com.mangrule.dailathon.core.models.DisconnectCauseMapper
 import com.mangrule.dailathon.core.models.toMap
+import com.mangrule.dailathon.domain.managers.ProximitySensorManager
+import com.mangrule.dailathon.presentation.notification.OngoingCallNotification
+import com.mangrule.dailathon.presentation.notification.createOngoingChannel
+import com.mangrule.dailathon.multisim.SimManager
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -43,6 +47,12 @@ class DialerInCallService : InCallService() {
     @Inject
     lateinit var callWaitingService: CallWaitingService
 
+    @Inject
+    lateinit var proximitySensorManager: ProximitySensorManager
+
+    @Inject
+    lateinit var simManager: SimManager
+
     // Track active calls in this InCallService
     private val activeCalls = mutableListOf<Call>()
     private var activeCall: Call? = null
@@ -54,10 +64,13 @@ class DialerInCallService : InCallService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        createOngoingChannel(applicationContext)
         Timber.v("DialerInCallService created and registered as singleton")
     }
 
     override fun onDestroy() {
+        OngoingCallNotification.cancel(applicationContext)
+        proximitySensorManager.stop()
         instance = null
         Timber.v("DialerInCallService destroyed")
         super.onDestroy()
@@ -99,6 +112,8 @@ class DialerInCallService : InCallService() {
                     
                     updateCallState(call)
                     pushCallListEvent()
+                    updateDeviceLifecycleState()
+                    updateOngoingNotification()
                 }
 
                 override fun onDetailsChanged(call: Call, details: Call.Details) {
@@ -116,9 +131,15 @@ class DialerInCallService : InCallService() {
                 override fun onCallDestroyed(call: Call) {
                     Timber.d("DialerInCallService: call destroyed")
                     activeCalls.remove(call)
+                    callStartTimes.remove(call)
+                    updateDeviceLifecycleState()
+                    updateOngoingNotification()
                 }
             }
         )
+
+        updateDeviceLifecycleState()
+        updateOngoingNotification()
     }
 
     override fun onCallRemoved(call: Call) {
@@ -128,8 +149,11 @@ class DialerInCallService : InCallService() {
         activeCalls.remove(call)
         if (activeCall == call) activeCall = null
         if (heldCall == call) heldCall = null
+        callStartTimes.remove(call)
 
         pushCallListEvent()
+        updateDeviceLifecycleState()
+        updateOngoingNotification()
     }
 
     override fun onCallAudioStateChanged(state: CallAudioState?) {
@@ -140,6 +164,7 @@ class DialerInCallService : InCallService() {
         )
         // Push updated audio state to Flutter
         pushCallListEvent()
+        updateOngoingNotification()
     }
 
     // ========== CALL STATE MANAGEMENT ==========
@@ -161,9 +186,51 @@ class DialerInCallService : InCallService() {
             }
             Call.STATE_DISCONNECTED -> {
                 activeCalls.remove(call)
-                callStartTimes.remove(call)
             }
         }
+    }
+
+    private fun updateDeviceLifecycleState() {
+        val hasActiveLikeCall = activeCalls.any {
+            it.state == Call.STATE_ACTIVE ||
+                it.state == Call.STATE_DIALING ||
+                it.state == Call.STATE_CONNECTING ||
+                it.state == Call.STATE_RINGING
+        }
+
+        if (hasActiveLikeCall) {
+            proximitySensorManager.start()
+        } else {
+            proximitySensorManager.stop()
+        }
+    }
+
+    private fun updateOngoingNotification() {
+        val call = activeCalls.firstOrNull { it.state == Call.STATE_ACTIVE }
+        if (call == null) {
+            OngoingCallNotification.cancel(applicationContext)
+            return
+        }
+
+        val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
+        val name = call.details.callerDisplayName?.toString()
+            ?: call.details.contactDisplayName?.toString()
+            ?: number
+        val muted = callAudioState?.isMuted ?: false
+        val startTime = callStartTimes[call]
+        val elapsed = if (startTime != null) {
+            ((android.os.SystemClock.elapsedRealtime() - startTime) / 1000).toInt()
+        } else {
+            0
+        }
+
+        OngoingCallNotification.update(
+            context = applicationContext,
+            callerName = name,
+            callerNumber = number,
+            isMuted = muted,
+            elapsedSeconds = elapsed,
+        )
     }
 
     // ========== CONFERENCE OPERATIONS ==========
@@ -309,9 +376,7 @@ class DialerInCallService : InCallService() {
             ((android.os.SystemClock.elapsedRealtime() - startTime) / 1000).toInt()
         else 0
 
-        val resolvedSimSlot = try {
-            call.details.accountHandle?.id?.toIntOrNull() ?: 0
-        } catch (_: Exception) { 0 }
+        val resolvedSimSlot = resolveSimSlot(call)
 
         val isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING
         val direction = if (isOutgoing) "OUTGOING" else "INCOMING"
@@ -347,6 +412,26 @@ class DialerInCallService : InCallService() {
             disconnectedBy = disconnectedByStr,
             unansweredReason = unansweredReasonStr,
         )
+    }
+
+    private fun resolveSimSlot(call: Call): Int {
+        return try {
+            val accountId = call.details.accountHandle?.id.orEmpty()
+            val subscriptionId = when {
+                accountId.startsWith("SIM_") -> accountId.removePrefix("SIM_").toIntOrNull()
+                else -> accountId.toIntOrNull()
+            }
+
+            if (subscriptionId == null) return 0
+
+            val slot = simManager.getActiveSimSlots()
+                .firstOrNull { it.subscriptionId == subscriptionId }
+                ?.slotIndex
+
+            slot ?: 0
+        } catch (_: Exception) {
+            0
+        }
     }
 
     // ── Push consolidated MultiCallState map to Flutter ────────────────────────

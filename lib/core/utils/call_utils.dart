@@ -1,29 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../service_locator.dart';
+import 'permission_checker.dart';
 
 class CallUtils {
   /// Places a call through the app's own telecom pipeline
   static Future<void> makeCall(BuildContext context, String number) async {
-    // 1. Clean the number
-    final cleaned = number.replaceAll(RegExp(r'\s+'), '');
+    final raw = number.trim();
+    if (raw.isEmpty) {
+      _showError(context, 'Please enter a phone number first.');
+      return;
+    }
 
-    // 2. Request permission at runtime
-    final status = await Permission.phone.request();
+    final hasPermission = await PermissionChecker.ensureCallPermission(context);
+    if (!hasPermission) return;
 
-    if (status.isGranted) {
-      try {
-        await ServiceLocator().callMethodChannel.dial(cleaned);
-      } catch (e) {
-        _showError(context, 'Could not place call.');
-      }
-    } else if (status.isPermanentlyDenied) {
-      // Guide user to settings
-      _showSettingsDialog(context);
+    // Keep leading '+' but strip other formatting chars.
+    String cleaned = raw;
+    if (!cleaned.startsWith('+')) {
+      cleaned = cleaned.replaceAll(RegExp(r'[^\d]'), '');
     } else {
-      _showError(context, 'Phone permission denied.');
+      cleaned = '+${cleaned.substring(1).replaceAll(RegExp(r'[^\d]'), '')}';
+    }
+    if (cleaned.isEmpty) {
+      _showError(context, 'Invalid phone number format.');
+      return;
+    }
+
+    try {
+      // Primary path: native Telecom integration for in-call controls.
+      await ServiceLocator().callMethodChannel.dial(cleaned);
+      return;
+    } catch (e) {
+      debugPrint('Native dial failed, falling back to tel URI: $e');
+    }
+
+    // Fallback: direct tel: launch so call placement still works.
+    final Uri telUri = Uri(scheme: 'tel', path: cleaned);
+    try {
+      final canLaunch = await canLaunchUrl(telUri);
+      if (canLaunch) {
+        final launched = await launchUrl(telUri);
+        if (!launched) {
+          _showError(context, 'Call failed to launch. Please try again.');
+        }
+      } else {
+        // Some OEM ROMs return false incorrectly; attempt launch directly.
+        final launched = await launchUrl(telUri);
+        if (!launched) {
+          _showError(context, 'Cannot initiate call on this device.');
+        }
+      }
+    } catch (e) {
+      _showError(context, 'Error making call: $e');
     }
   }
 
@@ -52,33 +82,6 @@ class CallUtils {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  static void _showSettingsDialog(BuildContext context) {
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Permission Required'),
-        content: const Text(
-          'Phone permission is permanently denied. '
-          'Please enable it in Settings to make calls.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings(); // from permission_handler
-            },
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
     );
   }
 }

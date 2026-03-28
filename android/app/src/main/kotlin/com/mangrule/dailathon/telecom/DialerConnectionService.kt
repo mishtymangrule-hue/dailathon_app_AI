@@ -4,10 +4,12 @@ import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.ConnectionService
 import android.telecom.PhoneAccountHandle
+import android.content.ComponentName
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
 import com.mangrule.dailathon.domain.managers.IncomingCallHandler
+import com.mangrule.dailathon.presentation.channels.CallEventChannelService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -34,10 +36,14 @@ class DialerConnectionService : ConnectionService() {
     @Inject
     lateinit var incomingCallHandler: IncomingCallHandler
 
+    @Inject
+    lateinit var callEventChannelService: CallEventChannelService
+
     private val coroutineScope = CoroutineScope(SupervisorJob())
 
     // Track active connections in this service
     private val activeConnections = mutableMapOf<String, DialerConnection>()
+    private val activeConferences = mutableListOf<DialerConference>()
 
     // ========== OUTGOING CALLS ==========
 
@@ -64,7 +70,9 @@ class DialerConnectionService : ConnectionService() {
         }
 
         // Create connection object
-        val connection = DialerConnection(applicationContext)
+        val connection = DialerConnection(applicationContext) { conn ->
+            pushConnectionUpdate(conn)
+        }
 
         // Set initial call state and metadata
         val displayName = resolveCallerName(phoneNumber)
@@ -96,7 +104,9 @@ class DialerConnectionService : ConnectionService() {
         val callId = java.util.UUID.randomUUID().toString()
 
         // Create connection object
-        val connection = DialerConnection(applicationContext)
+        val connection = DialerConnection(applicationContext) { conn ->
+            pushConnectionUpdate(conn)
+        }
 
         // Set incoming call state and metadata
         val displayName = resolveCallerName(phoneNumber)
@@ -126,6 +136,26 @@ class DialerConnectionService : ConnectionService() {
     override fun onConference(connection1: Connection?, connection2: Connection?) {
         super.onConference(connection1, connection2)
         Timber.d("onConference: ${connection1?.state} + ${connection2?.state}")
+
+        val first = connection1 as? DialerConnection
+        val second = connection2 as? DialerConnection
+        if (first == null || second == null) {
+            Timber.w("onConference: non-DialerConnection participants")
+            return
+        }
+
+        val accountHandle = phoneAccountManager.getDefaultOutgoingAccount()
+            ?: PhoneAccountHandle(
+                ComponentName(applicationContext, DialerConnectionService::class.java),
+                "conference_default"
+            )
+
+        val conference = DialerConference(applicationContext, accountHandle)
+        conference.addMember(first)
+        conference.addMember(second)
+        activeConferences.add(conference)
+        addConference(conference)
+        Timber.d("onConference: created conference with 2 members")
     }
 
     /**
@@ -154,6 +184,37 @@ class DialerConnectionService : ConnectionService() {
         // TODO: Query contacts database for name
         // For now, just return null to use number in UI
         return null
+    }
+
+    private fun pushConnectionUpdate(connection: DialerConnection) {
+        val stateLabel = when (connection.state) {
+            Connection.STATE_ACTIVE -> "active"
+            Connection.STATE_RINGING -> "ringing"
+            Connection.STATE_DIALING -> "dialing"
+            Connection.STATE_HOLDING -> "held"
+            Connection.STATE_DISCONNECTED -> "ended"
+            else -> "unknown"
+        }
+
+        val event = mapOf(
+            "activeCall" to mapOf(
+                "callId" to connection.getCallId(),
+                "number" to (connection.address?.schemeSpecificPart ?: ""),
+                "state" to stateLabel,
+                "duration" to connection.getCallDurationSeconds() * 1000,
+                "isOutgoing" to true,
+                "isMuted" to connection.isMuted(),
+                "isBluetoothAudio" to false,
+                "isSpeakerEnabled" to false,
+                "isHeld" to connection.isOnHold(),
+                "simSlot" to 0,
+                "disconnectCause" to "",
+            ),
+            "heldCall" to null,
+            "waitingCall" to null,
+        )
+
+        callEventChannelService.pushRawEvent(event)
     }
 
     /**

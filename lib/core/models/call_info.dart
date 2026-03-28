@@ -45,7 +45,7 @@ class CallInfo extends Equatable {
       isSpeakerOn: map['isSpeakerEnabled'] ?? false,
       isBluetoothActive: map['isBluetoothAudio'] ?? false,
       isWiredHeadsetConnected: map['isWiredHeadsetConnected'] ?? false,
-      isOnHold: map['isOnHold'] ?? false,
+      isOnHold: map['isOnHold'] ?? map['isHeld'] ?? false,
       isConference: map['isConference'] ?? false,
       conferenceMemberIds: List<String>.from(map['conferenceParticipants'] ?? []),
       simSlot: map['simSlot'] ?? 0,

@@ -36,6 +36,7 @@ data class CallStateUpdate(
  */
 class DialerConnection(
     private val context: Context,
+    private val onStateChanged: ((DialerConnection) -> Unit)? = null,
 ) : Connection() {
 
     // Unique call identifier
@@ -75,7 +76,7 @@ class DialerConnection(
             acquireScreenWakeLock()  // Keep screen bright during active call
 
             // Stop vibration
-            // pushEventToFlutter() - notify EventChannel
+            onStateChanged?.invoke(this)
         } else {
             Timber.w("DialerConnection[$callId].onAnswer: ignoring, not in ringing state")
         }
@@ -94,6 +95,7 @@ class DialerConnection(
         }
 
         setDisconnected(DisconnectCause(DisconnectCause.REJECTED))
+        onStateChanged?.invoke(this)
     }
 
     override fun onHold() {
@@ -104,7 +106,7 @@ class DialerConnection(
             setOnHold()
             isOnHold = true
             // Suspend audio here
-            // pushEventToFlutter()
+            onStateChanged?.invoke(this)
         } else {
             Timber.w("DialerConnection[$callId].onHold: ignoring, not in active state")
         }
@@ -118,7 +120,7 @@ class DialerConnection(
             setActive()
             isOnHold = false
             // Resume audio here
-            // pushEventToFlutter()
+            onStateChanged?.invoke(this)
         } else {
             Timber.w("DialerConnection[$callId].onUnhold: ignoring, not in holding state")
         }
@@ -129,6 +131,7 @@ class DialerConnection(
         Timber.d("DialerConnection[$callId].onDisconnect")
 
         setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
+        onStateChanged?.invoke(this)
         cleanup()
     }
 
@@ -329,6 +332,7 @@ class DialerConnection(
         callStartTime = SystemClock.uptimeMillis()
         acquireWakeLock()
         // Start vibration pattern
+        onStateChanged?.invoke(this)
     }
 
     /**
@@ -341,6 +345,7 @@ class DialerConnection(
         setRinging()
         acquireWakeLock()
         // Start ringing vibration pattern
+        onStateChanged?.invoke(this)
     }
 
     /**

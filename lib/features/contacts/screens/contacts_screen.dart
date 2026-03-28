@@ -201,6 +201,7 @@ class _ContactsScreenState extends State<ContactsScreen>
               ...groupContacts.map((contact) => _ContactTile(
                     contact: contact,
                     onEdit: () => _showEditContactForm(context, contact),
+                  onToggleFavorite: () => _toggleFavorite(contact),
                   )),
             ],
           );
@@ -215,6 +216,19 @@ class _ContactsScreenState extends State<ContactsScreen>
 
   void _showEditContactForm(BuildContext context, Contact contact) {
     _showContactForm(context, contact);
+  }
+
+  Future<void> _toggleFavorite(Contact contact) async {
+    try {
+      contact.isStarred = !contact.isStarred;
+      await FlutterContacts.updateContact(contact);
+      await _loadContacts();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update favorite')),
+      );
+    }
   }
 
   void _showContactForm(BuildContext context, Contact? existing) {
@@ -299,7 +313,8 @@ class _ContactsScreenState extends State<ContactsScreen>
 class _ContactTile extends StatelessWidget {
   final Contact contact;
   final VoidCallback? onEdit;
-  const _ContactTile({required this.contact, this.onEdit});
+  final VoidCallback? onToggleFavorite;
+  const _ContactTile({required this.contact, this.onEdit, this.onToggleFavorite});
 
   @override
   Widget build(BuildContext context) {
@@ -327,21 +342,28 @@ class _ContactTile extends StatelessWidget {
       subtitle: number != null
           ? Text(number, style: const TextStyle(color: Colors.grey))
           : const Text('No number', style: TextStyle(color: Colors.grey)),
-      trailing: number != null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.message, color: Colors.blue),
-                  onPressed: () => CallUtils.openSms(context, number),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.call, color: Colors.green),
-                  onPressed: () => CallUtils.makeCall(context, number),
-                ),
-              ],
-            )
-          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(
+              contact.isStarred ? Icons.star : Icons.star_border,
+              color: contact.isStarred ? Colors.amber : Colors.grey,
+            ),
+            onPressed: onToggleFavorite,
+          ),
+          if (number != null) ...[
+            IconButton(
+              icon: const Icon(Icons.message, color: Colors.blue),
+              onPressed: () => CallUtils.openSms(context, number),
+            ),
+            IconButton(
+              icon: const Icon(Icons.call, color: Colors.green),
+              onPressed: () => CallUtils.makeCall(context, number),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

@@ -24,11 +24,13 @@ class HeadsetReceiver : BroadcastReceiver() {
             1 -> {
                 // Headset plugged in — route audio to wired headset
                 Timber.d("HeadsetReceiver: Wired headset connected, routing audio")
+                audioRouter.setBluetoothScoOn(false)
                 audioRouter.setSpeakerPhoneOn(false)
             }
             0 -> {
                 // Headset unplugged — fall back to earpiece
                 Timber.d("HeadsetReceiver: Wired headset disconnected, falling back to earpiece")
+                audioRouter.setBluetoothScoOn(false)
                 audioRouter.setSpeakerPhoneOn(false)
             }
         }
@@ -41,15 +43,23 @@ class BluetoothAudioReceiver : BroadcastReceiver() {
         val state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)
         Timber.d("BluetoothAudioReceiver: SCO state=$state")
 
+        val service = DialerInCallService.getInstance()
+        val audioRouter = service?.audioRouter
+
         when (state) {
             AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
                 Timber.d("BluetoothAudioReceiver: Bluetooth SCO connected")
+                audioRouter?.setSpeakerPhoneOn(false)
+                audioRouter?.setBluetoothScoOn(true)
             }
             AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
                 Timber.d("BluetoothAudioReceiver: Bluetooth SCO disconnected, falling back")
+                audioRouter?.setBluetoothScoOn(false)
+                audioRouter?.setSpeakerPhoneOn(false)
             }
             AudioManager.SCO_AUDIO_STATE_ERROR -> {
                 Timber.e("BluetoothAudioReceiver: Bluetooth SCO error")
+                audioRouter?.setBluetoothScoOn(false)
             }
         }
     }

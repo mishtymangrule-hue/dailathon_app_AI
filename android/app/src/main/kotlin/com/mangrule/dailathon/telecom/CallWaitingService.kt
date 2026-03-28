@@ -93,7 +93,9 @@ class CallWaitingService @Inject constructor(
             isBluetoothAudio = false,
             isSpeakerEnabled = false,
             isHeld = false,
-            simSlot = 0,
+            simSlot = incomingCall.details.accountHandle?.id
+                ?.removePrefix("SIM_")
+                ?.toIntOrNull() ?: 0,
             callType = "call_waiting",
             callerName = incomingName,
         )
