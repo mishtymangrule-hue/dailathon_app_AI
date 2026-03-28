@@ -75,6 +75,16 @@ class MainActivity : FlutterActivity() {
     }
   }
 
+  override fun onResume() {
+    super.onResume()
+    callMethodChannelHandler.setActivity(this)
+  }
+
+  override fun onPause() {
+    callMethodChannelHandler.setActivity(null)
+    super.onPause()
+  }
+
   override fun onDestroy() {
     try {
       callEventChannelService.dispose()

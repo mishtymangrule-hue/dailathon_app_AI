@@ -73,6 +73,9 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"
         android:minSdkVersion="33" />
 
+    <!-- Battery optimization exemption (keeps call services alive) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Reschedule alarms after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -132,7 +135,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Dialer intent support -->
+            <!-- Plain DIAL (no URI) — required for ROLE_DIALER eligibility check -->
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
+            <!-- Dialer intent support with tel: scheme -->
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />

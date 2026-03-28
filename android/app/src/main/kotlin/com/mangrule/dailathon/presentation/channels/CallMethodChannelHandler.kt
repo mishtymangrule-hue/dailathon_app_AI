@@ -1,5 +1,6 @@
 package com.mangrule.dailathon.presentation.channels
 
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -13,6 +14,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import timber.log.Timber
+import java.lang.ref.WeakReference
 import com.mangrule.dailathon.telecom.PhoneAccountManager
 import com.mangrule.dailathon.audio.AudioRouter
 import com.mangrule.dailathon.vibration.CallVibrationManager
@@ -45,6 +47,12 @@ class CallMethodChannelHandler @Inject constructor(
 
   private val mainHandler = Handler(Looper.getMainLooper())
   private var methodChannel: MethodChannel? = null
+  private var activityRef: WeakReference<Activity>? = null
+
+  /** Called from MainActivity.onResume / onPause to provide Activity context for startActivity. */
+  fun setActivity(activity: Activity?) {
+    activityRef = if (activity != null) WeakReference(activity) else null
+  }
 
   /**
    * Initialize MethodChannel with FlutterEngine.
@@ -525,15 +533,16 @@ class CallMethodChannelHandler @Inject constructor(
     try {
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
       
-      // On Android 10+, use the official API
-      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-        val intent = Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
-          .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
-          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+      val intent = Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+        .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, context.packageName)
+      val activity = activityRef?.get()
+      if (activity != null && !activity.isFinishing) {
+        // Use Activity context — works on all OEMs including MIUI which blocks app-context launches
+        activity.startActivity(intent)
       } else {
-        // Fallback for older versions
-        Timber.w("Set default dialer not fully supported on this Android version")
+        // Fallback: application context requires NEW_TASK flag
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
       }
       
       Timber.v("Set default dialer requested")

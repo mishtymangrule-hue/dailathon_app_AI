@@ -5,10 +5,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
 
 /// Hard gate: blocks all app content until Dailathon is the system default
-/// dialer. The user cannot bypass this screen — no skip, no dismiss.
+/// dialer. The user cannot bypass this screen â€” no skip, no dismiss.
 ///
-/// On Android 10+, tapping the button opens the system default-dialer dialog
-/// (ACTION_CHANGE_DEFAULT_DIALER). On older Android it opens the Role Manager.
+/// Uses TelecomManager.ACTION_CHANGE_DEFAULT_DIALER (intent-based, API 29+).
+/// RoleManager / ROLE_DIALER is intentionally NOT used.
 /// When the user returns to the app the check is re-run automatically.
 class DefaultDialerGateScreen extends StatefulWidget {
   const DefaultDialerGateScreen({
@@ -30,6 +30,7 @@ class _DefaultDialerGateScreenState extends State<DefaultDialerGateScreen>
 
   bool _checking = true;
   bool _isDefault = false;
+  bool _requesting = false;  // prevents concurrent setDefaultDialer calls
 
   @override
   void initState() {
@@ -68,11 +69,14 @@ class _DefaultDialerGateScreenState extends State<DefaultDialerGateScreen>
   }
 
   Future<void> _requestDefault() async {
+    if (_requesting) return;  // debounce
+    setState(() => _requesting = true);
     try {
       await widget.channel.setDefaultDialer();
     } catch (_) {}
     // Re-check after a short delay to allow the system dialog to complete.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    setState(() => _requesting = false);
     if (mounted) _check();
   }
 
