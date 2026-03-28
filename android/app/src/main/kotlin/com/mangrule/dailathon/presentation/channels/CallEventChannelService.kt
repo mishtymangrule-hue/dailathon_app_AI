@@ -86,6 +86,21 @@ class CallEventChannelService @Inject constructor(
   }
 
   /**
+   * Push a raw map event to Flutter.
+   * Used for MultiCallState-format events (activeCall, heldCall, waitingCall).
+   */
+  fun pushRawEvent(event: Map<String, Any?>) {
+    mainHandler.post {
+      try {
+        eventSink?.success(event)
+        Timber.v("Pushed raw event: keys=${event.keys}")
+      } catch (e: Exception) {
+        Timber.e(e, "Error pushing raw event")
+      }
+    }
+  }
+
+  /**
    * Push error event to Flutter.
    */
   fun pushError(code: String, message: String?, details: Any? = null) {

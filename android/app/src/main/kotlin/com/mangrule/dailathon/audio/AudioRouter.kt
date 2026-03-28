@@ -396,8 +396,9 @@ class AudioRouter @Inject constructor(
 
   /**
    * Get list of available audio routes as strings for Flutter.
-   * Returns: ["earpiece", "speaker", "wired_headset", "bluetooth"]
-   * Priority order (first is highest priority).
+   * Returns: ["speaker", "wired_headset", "bluetooth"] — earpiece is intentionally
+   * excluded because TYPE_BUILTIN_EARPIECE is always reported as available on Android
+   * phones; earpiece is managed automatically via the proximity sensor.
    */
   fun getAvailableRoutes(): List<String> {
     return try {
@@ -414,9 +415,7 @@ class AudioRouter @Inject constructor(
           AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> {
             if (!routes.contains("wired_headset")) routes.add("wired_headset")
           }
-          AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> {
-            if (!routes.contains("earpiece")) routes.add("earpiece")
-          }
+          // TYPE_BUILTIN_EARPIECE intentionally omitted — see comment above.
           AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
           AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE -> {
             if (!routes.contains("speaker")) routes.add("speaker")

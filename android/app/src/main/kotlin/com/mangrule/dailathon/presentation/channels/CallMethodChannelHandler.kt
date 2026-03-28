@@ -115,16 +115,20 @@ class CallMethodChannelHandler @Inject constructor(
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
       val uri = Uri.fromParts("tel", number, null)
 
-      // Use the system's call-capable phone accounts (real SIM accounts from telephony stack)
-      // NOT the app's custom DialerConnectionService account.
+      // For simSlot=0 (default SIM), do NOT set a PhoneAccountHandle — passing one forces
+      // a specific account which may route through the app's own DialerConnectionService.
+      // Letting the OS choose ensures the real telephony stack handles the call.
+      // For simSlot>0, look up the matching system SIM account (app's own account excluded).
       val extras = android.os.Bundle()
-      val simHandle = getSystemSimPhoneAccountHandle(telecomManager, simSlot)
-      if (simHandle != null) {
-        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, simHandle)
+      if (simSlot > 0) {
+        val simHandle = getSystemSimPhoneAccountHandle(telecomManager, simSlot)
+        if (simHandle != null) {
+          extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, simHandle)
+        }
       }
 
       telecomManager.placeCall(uri, extras)
-      Timber.v("Dial (placeCall): number=$number, simSlot=$simSlot, simHandle=${simHandle?.id}")
+      Timber.v("Dial (placeCall): number=$number, simSlot=$simSlot")
       result.success(null)
     } catch (e: SecurityException) {
       // App is not the default dialer — fall back to ACTION_CALL intent.
@@ -134,7 +138,10 @@ class CallMethodChannelHandler @Inject constructor(
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${Uri.encode(number)}")).apply {
           addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(intent)
+        // Prefer an Activity context — required on MIUI/HyperOS which blocks
+        // startActivity() from non-Activity (ApplicationContext) background launches.
+        val launchContext = activityRef?.get() ?: context
+        launchContext.startActivity(intent)
         result.success(null)
       } catch (e2: Exception) {
         Timber.e(e2, "ACTION_CALL fallback failed for $number")
@@ -157,7 +164,10 @@ class CallMethodChannelHandler @Inject constructor(
     simSlot: Int,
   ): android.telecom.PhoneAccountHandle? {
     return try {
-      val accounts = telecomManager.callCapablePhoneAccounts
+      // Exclude the app's own DialerConnectionService account: only real system SIM accounts.
+      val accounts = telecomManager.callCapablePhoneAccounts.filter { handle ->
+        handle.componentName.packageName != context.packageName
+      }
       if (accounts.isEmpty()) return null
 
       if (simSlot <= 0 || accounts.size == 1) {

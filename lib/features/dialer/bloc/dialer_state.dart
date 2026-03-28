@@ -28,8 +28,25 @@ class DialerActive extends DialerState {
   List<Object?> get props => [currentNumber, selectedSimSlot, contactSuggestions, availableSims];
 }
 
+/// Shown as a loading overlay while the OS call is being submitted.
+/// Does NOT trigger navigation to /in-call.
+class DialerPlacingCall extends DialerState {
+  const DialerPlacingCall({this.number = '', this.simSlot = 0});
+  final String number;
+  final int simSlot;
+
+  @override
+  List<Object?> get props => [number, simSlot];
+}
+
+/// Emitted AFTER dial() returns without error. Triggers navigation to /in-call.
 class DialerCalling extends DialerState {
-  const DialerCalling();
+  const DialerCalling({this.number = '', this.simSlot = 0});
+  final String number;
+  final int simSlot;
+
+  @override
+  List<Object?> get props => [number, simSlot];
 }
 
 class DialerError extends DialerState {

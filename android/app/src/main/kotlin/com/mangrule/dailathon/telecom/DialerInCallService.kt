@@ -10,6 +10,7 @@ import com.mangrule.dailathon.presentation.channels.CallEventChannelService
 import com.mangrule.dailathon.core.models.CallInfo
 import com.mangrule.dailathon.core.models.CallState
 import com.mangrule.dailathon.core.models.DisconnectCauseMapper
+import com.mangrule.dailathon.core.models.toMap
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -78,6 +79,7 @@ class DialerInCallService : InCallService() {
             // This is a CALL WAITING event - use dedicated service
             Timber.d("DialerInCallService: CALL WAITING detected - new incoming call while active")
             callWaitingService.handleIncomingCallWhileActive(existingActiveCall, call)
+            pushCallListEvent() // notify Flutter of the waiting call
         } else {
             // Normal call event - push regular state update
             updateCallState(call)
@@ -284,113 +286,97 @@ class DialerInCallService : InCallService() {
      * Push a call waiting event to Flutter.
      * Called when a new incoming call arrives while another call is active.
      */
-    private fun pushCallWaitingEvent(waitingCall: Call) {
-        try {
-            val callState = when (waitingCall.state) {
-                Call.STATE_RINGING -> CallState.RINGING
-                else -> CallState.RINGING  // Call waiting should always be ringing
-            }
+    // ── Helper: build CallInfo for a single Call ──────────────────────────────
 
-            val callInfo = CallInfo(
-                callId = waitingCall.details.handle?.schemeSpecificPart ?: "",
-                number = waitingCall.details.handle?.schemeSpecificPart ?: "",
-                state = callState,
-                duration = 0.seconds,
-                isOutgoing = false,  // Call waiting is always incoming
-                isMuted = false,
-                isBluetoothAudio = false,
-                isSpeakerEnabled = false,
-                isHeld = false,
-                simSlot = 0,
-                callType = "call_waiting"  // Specific flag for call waiting banner
-            )
+    private fun buildCallInfo(call: Call): CallInfo {
+        val audioState = callAudioState
+        val muted = audioState?.isMuted ?: false
+        val speaker = audioState?.route == CallAudioState.ROUTE_SPEAKER
+        val bluetooth = audioState?.route == CallAudioState.ROUTE_BLUETOOTH
 
-            eventChannelService.pushCallStateUpdate(callInfo)
-            Timber.d("DialerInCallService.pushCallWaitingEvent: sent to Flutter")
-        } catch (e: Exception) {
-            Timber.e(e, "Error pushing call waiting event")
+        val callState = when (call.state) {
+            Call.STATE_ACTIVE                               -> CallState.ACTIVE
+            Call.STATE_RINGING                             -> CallState.RINGING
+            Call.STATE_DIALING                             -> CallState.DIALING
+            Call.STATE_HOLDING                             -> CallState.HELD
+            Call.STATE_DISCONNECTED, Call.STATE_DISCONNECTING -> CallState.DISCONNECTED
+            Call.STATE_CONNECTING                          -> CallState.CONNECTING
+            else                                           -> CallState.UNKNOWN
         }
+
+        val startTime = callStartTimes[call]
+        val durationSecs = if (startTime != null)
+            ((android.os.SystemClock.elapsedRealtime() - startTime) / 1000).toInt()
+        else 0
+
+        val resolvedSimSlot = try {
+            call.details.accountHandle?.id?.toIntOrNull() ?: 0
+        } catch (_: Exception) { 0 }
+
+        val isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING
+        val direction = if (isOutgoing) "OUTGOING" else "INCOMING"
+        val callStateStr = callState.name
+
+        val disconnectCauseStr = if (call.state == Call.STATE_DISCONNECTED)
+            classifyDisconnectCause(call.details.disconnectCause)
+        else null
+
+        val disconnectedByStr = if (call.state == Call.STATE_DISCONNECTED)
+            DisconnectCauseMapper.mapDisconnectedBy(
+                call.details.disconnectCause, callStateStr, direction
+            ).name
+        else null
+
+        val wasAnswered = durationSecs > 0
+        val unansweredReasonStr = if (call.state == Call.STATE_DISCONNECTED && !wasAnswered)
+            DisconnectCauseMapper.mapUnansweredReason(call.details.disconnectCause, direction)
+        else null
+
+        return CallInfo(
+            callId = call.details.handle?.schemeSpecificPart ?: "",
+            number = call.details.handle?.schemeSpecificPart ?: "",
+            state = callState,
+            duration = durationSecs.seconds,
+            isOutgoing = isOutgoing,
+            isMuted = muted,
+            isBluetoothAudio = bluetooth,
+            isSpeakerEnabled = speaker,
+            isHeld = call.state == Call.STATE_HOLDING,
+            simSlot = resolvedSimSlot,
+            disconnectCause = disconnectCauseStr,
+            disconnectedBy = disconnectedByStr,
+            unansweredReason = unansweredReasonStr,
+        )
     }
 
+    // ── Push consolidated MultiCallState map to Flutter ────────────────────────
+
     private fun pushCallListEvent() {
-        // Emit all active calls to Flutter via EventChannel
         try {
-            val audioState = callAudioState
-            val muted = audioState?.isMuted ?: false
-            val speaker = audioState?.route == CallAudioState.ROUTE_SPEAKER
-            val bluetooth = audioState?.route == CallAudioState.ROUTE_BLUETOOTH
+            // Select primary call: DIALING/CONNECTING > ACTIVE > RINGING > DISCONNECTED
+            val primaryCall = activeCalls.firstOrNull {
+                it.state == Call.STATE_DIALING || it.state == Call.STATE_CONNECTING
+            } ?: activeCalls.firstOrNull { it.state == Call.STATE_ACTIVE }
+              ?: activeCalls.firstOrNull { it.state == Call.STATE_RINGING }
+              ?: activeCalls.firstOrNull { it.state == Call.STATE_DISCONNECTED }
 
-            for (call in activeCalls) {
-                val callState = when (call.state) {
-                    Call.STATE_ACTIVE -> CallState.ACTIVE
-                    Call.STATE_RINGING -> CallState.RINGING
-                    Call.STATE_DIALING -> CallState.DIALING
-                    Call.STATE_HOLDING -> CallState.HELD
-                    Call.STATE_DISCONNECTED -> CallState.DISCONNECTED
-                    Call.STATE_CONNECTING -> CallState.CONNECTING
-                    Call.STATE_DISCONNECTING -> CallState.DISCONNECTED
-                    else -> CallState.UNKNOWN
-                }
-                
-                // Calculate real duration from tracked start time
-                val startTime = callStartTimes[call]
-                val durationSecs = if (startTime != null) {
-                    ((android.os.SystemClock.elapsedRealtime() - startTime) / 1000).toInt()
-                } else 0
+            val heldCall = activeCalls.firstOrNull { it.state == Call.STATE_HOLDING }
 
-                // Resolve SIM slot from phone account
-                val resolvedSimSlot = try {
-                    call.details.accountHandle?.id?.toIntOrNull() ?: 0
-                } catch (_: Exception) { 0 }
+            // Call waiting: a RINGING call while another call is ACTIVE
+            val waitingCall = if (primaryCall?.state == Call.STATE_ACTIVE) {
+                activeCalls.firstOrNull { it != primaryCall && it.state == Call.STATE_RINGING }
+            } else null
 
-                // Classify disconnect cause
-                val disconnectCauseStr = if (call.state == Call.STATE_DISCONNECTED) {
-                    classifyDisconnectCause(call.details.disconnectCause)
-                } else null
+            val multiCallMap: Map<String, Any?> = mapOf(
+                "activeCall"  to primaryCall?.let { buildCallInfo(it).toMap() },
+                "heldCall"    to heldCall?.let   { buildCallInfo(it).toMap() },
+                "waitingCall" to waitingCall?.let { buildCallInfo(it).toMap() },
+            )
 
-                // Determine who ended the call and unanswered reason
-                val isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING
-                val direction = if (isOutgoing) "OUTGOING" else "INCOMING"
-                val callStateStr = when (call.state) {
-                    Call.STATE_DIALING -> "DIALING"
-                    Call.STATE_RINGING -> "RINGING"
-                    Call.STATE_ACTIVE -> "ACTIVE"
-                    else -> "UNKNOWN"
-                }
-                val disconnectedByStr = if (call.state == Call.STATE_DISCONNECTED) {
-                    DisconnectCauseMapper.mapDisconnectedBy(
-                        call.details.disconnectCause, callStateStr, direction
-                    ).name
-                } else null
-                val wasAnswered = durationSecs > 0
-                val unansweredReasonStr = if (call.state == Call.STATE_DISCONNECTED && !wasAnswered) {
-                    DisconnectCauseMapper.mapUnansweredReason(
-                        call.details.disconnectCause, direction
-                    )
-                } else null
-
-                val callInfo = CallInfo(
-                    callId = call.details.handle?.schemeSpecificPart ?: "",
-                    number = call.details.handle?.schemeSpecificPart ?: "",
-                    state = callState,
-                    duration = durationSecs.seconds,
-                    isOutgoing = isOutgoing,
-                    isMuted = muted,
-                    isBluetoothAudio = bluetooth,
-                    isSpeakerEnabled = speaker,
-                    isHeld = call.state == Call.STATE_HOLDING,
-                    simSlot = resolvedSimSlot,
-                    disconnectCause = disconnectCauseStr,
-                    disconnectedBy = disconnectedByStr,
-                    unansweredReason = unansweredReasonStr,
-                )
-                
-                eventChannelService.pushCallStateUpdate(callInfo)
-            }
-            
+            eventChannelService.pushRawEvent(multiCallMap)
             Timber.d(
-                "DialerInCallService.pushCallListEvent: " +
-                        "${activeCalls.size} calls (merge=${canMerge()})"
+                "pushCallListEvent: primary=${primaryCall?.state}, " +
+                "held=${heldCall?.state}, waiting=${waitingCall?.state}"
             )
         } catch (e: Exception) {
             Timber.e(e, "Error pushing call list event")

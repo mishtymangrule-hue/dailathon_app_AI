@@ -43,7 +43,13 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   }
 
   @override
-  Widget build(BuildContext context) => BlocBuilder<InCallBloc, InCallState>(
+  Widget build(BuildContext context) => BlocConsumer<InCallBloc, InCallState>(
+      listenWhen: (prev, curr) =>
+          (curr is InCallIdle || curr is InCallEnded) &&
+          prev is! InCallIdle,
+      listener: (context, state) {
+        if (context.canPop()) context.pop();
+      },
       builder: (context, state) {
         final hasWaitingCall = state is InCallActive && state.hasCallWaiting;
         // Use live state from BLoC, fallback to initial widget.callInfo
@@ -395,13 +401,13 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   IconData _audioRouteIcon(CallInfo callInfo) {
     if (callInfo.isBluetoothAudio) return Icons.bluetooth_audio;
     if (callInfo.isSpeakerEnabled) return Icons.volume_up;
-    return Icons.hearing;
+    return Icons.volume_up;
   }
 
   String _audioRouteLabel(CallInfo callInfo) {
     if (callInfo.isBluetoothAudio) return 'Bluetooth';
     if (callInfo.isSpeakerEnabled) return 'Speaker';
-    return 'Earpiece';
+    return 'Speaker';
   }
 
   void _showAudioRouteSheet(
@@ -409,10 +415,11 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     List<String> availableRoutes,
     CallInfo callInfo,
   ) {
-    // Fallback routes if the platform hasn't reported any
+    // Fallback routes if the platform hasn't reported any — earpiece excluded
+    // (proximity-sensor managed, not user-selectable)
     final routes = availableRoutes.isNotEmpty
         ? availableRoutes
-        : ['earpiece', 'speaker'];
+        : ['speaker'];
 
     showModalBottomSheet<void>(
       context: context,

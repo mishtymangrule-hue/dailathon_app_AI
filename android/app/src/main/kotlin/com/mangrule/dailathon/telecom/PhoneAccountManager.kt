@@ -86,7 +86,10 @@ class PhoneAccountManager @Inject constructor(
     ): android.telecom.PhoneAccount {
         return android.telecom.PhoneAccount.builder(handle, displayName)
             .setCapabilities(
-                android.telecom.PhoneAccount.CAPABILITY_CALL_PROVIDER or
+                // CAPABILITY_CALL_PROVIDER removed: it made this account appear in
+                // callCapablePhoneAccounts alongside real SIM accounts, causing
+                // placeCall() to route through this fake ConnectionService instead
+                // of the real telephony stack.
                 android.telecom.PhoneAccount.CAPABILITY_CONNECTION_MANAGER
             )
             .setHighlightColor(android.graphics.Color.parseColor("#2196F3"))

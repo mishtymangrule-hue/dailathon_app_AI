@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:call_log/call_log.dart' as call_log_pkg;
-import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/neu.dart';
+import '../../../core/models/call_info.dart';
 import '../../dialer/bloc/dialer_bloc.dart';
 import '../widgets/dialpad.dart';
 
@@ -71,20 +71,26 @@ class _DialerScreenState extends State<DialerScreen> {
         if (state is DialerError) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(state.error),
-            backgroundColor: AppTheme.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
           ));
+        } else if (state is DialerCalling && state.number.isNotEmpty) {
+          // dial() succeeded — navigate to the in-call screen.
+          context.push('/in-call', extra: {
+            'callInfo': CallInfo(
+              callId: state.number,
+              state: CallState.dialing,
+              callerNumber: state.number,
+            ),
+          });
         }
       },
       child: Scaffold(
-        backgroundColor: AppTheme.bg,
         body: SafeArea(
           child: BlocBuilder<DialerBloc, DialerState>(
             builder: (context, state) {
-              if (state is DialerCalling) {
+              // Both DialerPlacingCall (waiting for OS) and DialerCalling
+              // (after success, briefly before push navigation fires) show overlay.
+              if (state is DialerCalling || state is DialerPlacingCall) {
                 return const _CallingOverlay();
               }
               final s = state is DialerActive ? state : const DialerActive();
@@ -164,7 +170,7 @@ class _DialerScreenState extends State<DialerScreen> {
   }
 }
 
-//  Number display 
+// ─── Number Display ──────────────────────────────────────────────────────────
 
 class _NumberDisplay extends StatelessWidget {
   const _NumberDisplay({
@@ -179,52 +185,48 @@ class _NumberDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: SizedBox(
-        height: 80,
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: onPaste,
-              behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(Icons.content_paste_rounded,
-                    size: 19, color: AppTheme.textHint),
-              ),
-            ),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                transitionBuilder: (child, anim) =>
-                    FadeTransition(opacity: anim, child: child),
-                child: FittedBox(
-                  key: ValueKey(formatted),
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: Text(
-                    formatted.isEmpty ? '' : formatted,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.w300,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: 2.5,
-                    ),
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 88,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: onPaste,
+            icon: const Icon(Icons.content_paste_rounded),
+            iconSize: 20,
+            color: scheme.onSurfaceVariant,
+            tooltip: 'Paste number',
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 120),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: FittedBox(
+                key: ValueKey(formatted),
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  formatted,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 4,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 35),
-          ],
-        ),
+          ),
+          // Symmetry spacer matching the paste icon button width
+          const SizedBox(width: 48),
+        ],
       ),
     );
   }
 }
 
-//  SIM selector 
+// ─── SIM Selector ────────────────────────────────────────────────────────────
 
 class _SimSelector extends StatelessWidget {
   const _SimSelector({
@@ -240,45 +242,68 @@ class _SimSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 32,
+      height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: sims.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final isSelected = selected == i;
           final label = (sims[i] is Map)
               ? (sims[i] as Map)['displayName']?.toString() ?? 'SIM ${i + 1}'
               : 'SIM ${i + 1}';
-          return GestureDetector(
-            onTap: () => onSelect(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primary : AppTheme.bg,
-                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ]
-                    : AppTheme.raisedShadow(distance: 3, blur: 7),
-              ),
-              child: Center(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
-                    letterSpacing: 0.3,
-                  ),
+          return ChoiceChip(
+            label: Text(label),
+            selected: selected == i,
+            onSelected: (v) { if (v) onSelect(i); },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─── T9 Suggestion Bar ───────────────────────────────────────────────────────
+
+class _SuggestionBar extends StatelessWidget {
+  const _SuggestionBar({required this.suggestions, required this.onTap});
+
+  final List<dynamic> suggestions;
+  final void Function(String) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final c = suggestions[i];
+          final name = c.name as String? ?? '';
+          final phone = c.phoneNumber as String? ?? '';
+          return Card(
+            clipBehavior: Clip.hardEdge,
+            child: InkWell(
+              onTap: () => onTap(phone),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(phone,
+                        style: textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant)),
+                  ],
                 ),
               ),
             ),
@@ -289,67 +314,7 @@ class _SimSelector extends StatelessWidget {
   }
 }
 
-//  T9 suggestions 
-
-class _SuggestionBar extends StatelessWidget {
-  const _SuggestionBar({required this.suggestions, required this.onTap});
-
-  final List<dynamic> suggestions;
-  final void Function(String) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 66,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: suggestions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final c = suggestions[i];
-          final name = c.name as String? ?? '';
-          final phone = c.phoneNumber as String? ?? '';
-          return GestureDetector(
-            onTap: () => onTap(phone),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.bg,
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                boxShadow: AppTheme.raisedShadow(distance: 3, blur: 9),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    phone,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-//  Action row 
+// ─── Action Row ──────────────────────────────────────────────────────────────
 
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
@@ -374,32 +339,36 @@ class _ActionRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left — redial / empty placeholder
+          // Left — redial (when nothing typed) / empty placeholder
           SizedBox(
             width: 52,
             height: 52,
             child: hasNumber
-                ? const SizedBox.shrink()
-                : _IconAction(
-                    icon: Icons.history_rounded,
-                    onTap: onRedial,
+                ? null
+                : IconButton.outlined(
+                    icon: const Icon(Icons.history_rounded),
+                    onPressed: onRedial,
+                    tooltip: 'Redial last',
                   ),
           ),
 
           // Center — call button
-          _CallFab(enabled: hasNumber, onTap: hasNumber ? onCall : null),
+          _CallButton(enabled: hasNumber, onTap: onCall),
 
-          // Right — backspace / empty placeholder
+          // Right — backspace (when digits typed) / empty placeholder
           SizedBox(
             width: 52,
             height: 52,
             child: hasNumber
-                ? _IconAction(
-                    icon: Icons.backspace_outlined,
-                    onTap: onBackspace,
+                ? GestureDetector(
                     onLongPress: onBackspaceLong,
+                    child: IconButton(
+                      icon: const Icon(Icons.backspace_outlined),
+                      onPressed: onBackspace,
+                      tooltip: 'Backspace',
+                    ),
                   )
-                : const SizedBox.shrink(),
+                : null,
           ),
         ],
       ),
@@ -407,167 +376,62 @@ class _ActionRow extends StatelessWidget {
   }
 }
 
-//  Auxiliary widgets 
+// ─── Call Button ─────────────────────────────────────────────────────────────
 
-class _IconAction extends StatefulWidget {
-  const _IconAction({
-    required this.icon,
-    required this.onTap,
-    this.onLongPress,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  State<_IconAction> createState() => _IconActionState();
-}
-
-class _IconActionState extends State<_IconAction> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      onLongPress: widget.onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppTheme.bg,
-          shape: BoxShape.circle,
-          boxShadow: _pressed
-              ? AppTheme.insetShadow()
-              : AppTheme.raisedShadow(distance: 3, blur: 9),
-        ),
-        child: Icon(widget.icon, size: 22, color: AppTheme.textSecondary),
-      ),
-    );
-  }
-}
-
-class _CallFab extends StatefulWidget {
-  const _CallFab({required this.enabled, this.onTap});
+class _CallButton extends StatelessWidget {
+  const _CallButton({required this.enabled, required this.onTap});
 
   final bool enabled;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
-  @override
-  State<_CallFab> createState() => _CallFabState();
-}
-
-class _CallFabState extends State<_CallFab>
-    with SingleTickerProviderStateMixin {
-  bool _pressed = false;
-  late final AnimationController _pulse;
-  late final Animation<double> _pulseAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-    );
-    if (widget.enabled) _pulse.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(_CallFab old) {
-    super.didUpdateWidget(old);
-    if (widget.enabled && !old.enabled) {
-      _pulse.repeat(reverse: true);
-    } else if (!widget.enabled && old.enabled) {
-      _pulse.stop();
-      _pulse.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
+  static const _green = Color(0xFF1EA74A);
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.enabled ? AppTheme.success : AppTheme.textHint;
-    return GestureDetector(
-      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: widget.enabled
-          ? (_) {
-              setState(() => _pressed = false);
-              widget.onTap?.call();
-            }
-          : null,
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedBuilder(
-        animation: _pulseAnim,
-        builder: (_, child) => Transform.scale(
-          scale: (widget.enabled && !_pressed) ? _pulseAnim.value : 1.0,
-          child: child,
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 80),
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: enabled ? _green : scheme.surfaceContainerHighest,
+      shape: const CircleBorder(),
+      elevation: enabled ? 4 : 0,
+      shadowColor: _green.withValues(alpha: 0.45),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: enabled ? onTap : null,
+        splashColor: Colors.white24,
+        child: SizedBox(
           width: 72,
           height: 72,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: _pressed || !widget.enabled
-                ? AppTheme.insetShadow()
-                : [
-                    BoxShadow(
-                      color: AppTheme.success.withValues(alpha: 0.45),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                    ...AppTheme.raisedShadow(distance: 4, blur: 12),
-                  ],
+          child: Icon(
+            Icons.call_rounded,
+            color: enabled ? Colors.white : scheme.onSurfaceVariant,
+            size: 30,
           ),
-          child: const Icon(Icons.call_rounded, color: Colors.white, size: 30),
         ),
       ),
     );
   }
 }
+
+// ─── Calling Overlay ─────────────────────────────────────────────────────────
 
 class _CallingOverlay extends StatelessWidget {
   const _CallingOverlay();
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 64,
-            height: 64,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: AppTheme.success,
-            ),
-          ),
-          SizedBox(height: 20),
+          CircularProgressIndicator(color: scheme.primary, strokeWidth: 3),
+          const SizedBox(height: 24),
           Text(
-            'Placing call',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
-            ),
+            'Placing call…',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),

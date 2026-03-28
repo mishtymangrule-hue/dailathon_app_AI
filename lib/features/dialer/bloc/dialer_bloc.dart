@@ -20,6 +20,9 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     on<SimSlotSelected>(_onSimSlotSelected);
     on<T9SearchPerformed>(_onT9SearchPerformed);
     on<NumberChanged>(_onNumberChanged);
+    on<SpeedDialLongPress>(_onSpeedDialLongPress);
+    on<SpeedDialAssigned>((event, emit) {});
+    on<SpeedDialRemoved>((event, emit) {});
   }
 
   final CallMethodChannel _callMethodChannel;
@@ -96,19 +99,27 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
     final currentState = state as DialerActive;
     if (currentState.currentNumber.isEmpty) return;
 
-    emit(const DialerCalling());
+    // Show loading overlay on the dialer screen while the call is being
+    // submitted to the OS. This does NOT navigate away yet.
+    emit(DialerPlacingCall(
+      number: currentState.currentNumber,
+      simSlot: currentState.selectedSimSlot,
+    ));
 
     try {
       await _callMethodChannel.dial(
         currentState.currentNumber,
         simSlot: currentState.selectedSimSlot,
       );
-      emit(DialerActive(
-        selectedSimSlot: currentState.selectedSimSlot,
+      // dial() returned without error — the OS accepted the call.
+      // NOW navigate to /in-call.
+      emit(DialerCalling(
+        number: currentState.currentNumber,
+        simSlot: currentState.selectedSimSlot,
       ));
     } catch (e) {
+      // Call failed — go back to dialer and show error snackbar.
       emit(DialerError(error: e.toString()));
-      // Restore active state so the screen recovers
       emit(DialerActive(
         currentNumber: currentState.currentNumber,
         selectedSimSlot: currentState.selectedSimSlot,
@@ -133,6 +144,9 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
       ),
     );
   }
+
+  // Speed dial long-press: handled natively via speed_dial_method_channel.
+  void _onSpeedDialLongPress(SpeedDialLongPress event, Emitter<DialerState> emit) {}
 
   Future<void> _onT9SearchPerformed(
     T9SearchPerformed event,

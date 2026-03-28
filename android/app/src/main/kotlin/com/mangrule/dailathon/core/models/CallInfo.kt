@@ -34,7 +34,15 @@ fun CallInfo.toMap(): Map<String, Any?> {
     return mapOf(
         "callId" to callId,
         "number" to number,
-        "state" to state.name,
+        "state" to when (state) {
+            CallState.DISCONNECTED -> "ended"
+            CallState.ACTIVE       -> "active"
+            CallState.RINGING      -> "ringing"
+            CallState.DIALING      -> "dialing"
+            CallState.HELD         -> "held"
+            CallState.CONNECTING   -> "dialing"
+            CallState.UNKNOWN      -> "dialing"
+        },
         "duration" to duration.inWholeMilliseconds,
         "isOutgoing" to isOutgoing,
         "isMuted" to isMuted,
