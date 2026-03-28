@@ -173,58 +173,91 @@ class NeuDialKey extends StatefulWidget {
   State<NeuDialKey> createState() => _NeuDialKeyState();
 }
 
-class _NeuDialKeyState extends State<NeuDialKey> {
+class _NeuDialKeyState extends State<NeuDialKey>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
+      onTapDown: (_) {
+        setState(() => _pressed = true);
+        _scaleController.forward();
+      },
       onTapUp: (_) {
         setState(() => _pressed = false);
+        _scaleController.reverse();
         widget.onTap();
       },
-      onTapCancel: () => setState(() => _pressed = false),
+      onTapCancel: () {
+        setState(() => _pressed = false);
+        _scaleController.reverse();
+      },
       onLongPress: widget.onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          color: AppTheme.bg,
-          shape: BoxShape.circle,
-          boxShadow: _pressed
-              ? AppTheme.insetShadow()
-              : AppTheme.raisedShadow(distance: 4, blur: 10),
-        ),
-        child: Center(
-          child: widget.icon != null
-              ? Icon(widget.icon, color: AppTheme.textPrimary, size: 26)
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.label,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        height: 1.1,
-                      ),
-                    ),
-                    if (widget.sublabel != null &&
-                        widget.sublabel!.isNotEmpty)
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: AppTheme.bg,
+            shape: BoxShape.circle,
+            boxShadow: _pressed
+                ? AppTheme.insetShadow()
+                : AppTheme.raisedShadow(distance: 4, blur: 10),
+          ),
+          child: Center(
+            child: widget.icon != null
+                ? Icon(widget.icon, color: AppTheme.textPrimary, size: 26)
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        widget.sublabel!,
+                        widget.label,
                         style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 1.4,
+                          color: AppTheme.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
                         ),
                       ),
-                  ],
-                ),
+                      if (widget.sublabel != null &&
+                          widget.sublabel!.isNotEmpty)
+                        Text(
+                          widget.sublabel!,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

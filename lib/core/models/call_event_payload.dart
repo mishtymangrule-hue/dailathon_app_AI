@@ -11,6 +11,17 @@ enum UnansweredReason {
   busy,
   declined,
   unavailable,
+  leadNoAnswer,
+  leadRejected,
+  employeeRejectedIncoming,
+  employeeEndedBeforeConnect,
+  missedIncoming,
+}
+
+enum DisconnectedBy {
+  user,
+  lead,
+  system,
 }
 
 class CallEventPayload extends Equatable {
@@ -26,6 +37,7 @@ class CallEventPayload extends Equatable {
     this.employeeId,
     this.simSlot,
     this.attemptCount = 0,
+    this.disconnectedBy,
   });
 
   factory CallEventPayload.fromJson(Map<String, dynamic> json) =>
@@ -51,6 +63,9 @@ class CallEventPayload extends Equatable {
         employeeId: json['employeeId'] as String?,
         simSlot: json['simSlot'] as int?,
         attemptCount: json['attemptCount'] as int? ?? 0,
+        disconnectedBy: json['disconnectedBy'] != null
+            ? DisconnectedBy.values.byName(json['disconnectedBy'] as String)
+            : null,
       );
 
   final String eventId;
@@ -67,6 +82,7 @@ class CallEventPayload extends Equatable {
   final String? employeeId;
   final int? simSlot;
   final int attemptCount;
+  final DisconnectedBy? disconnectedBy;
 
   Map<String, dynamic> toJson() => {
         'eventId': eventId,
@@ -84,8 +100,10 @@ class CallEventPayload extends Equatable {
         if (employeeId != null) 'employeeId': employeeId,
         if (simSlot != null) 'simSlot': simSlot,
         'attemptCount': attemptCount,
+        if (disconnectedBy != null)
+          'disconnectedBy': disconnectedBy!.name.toUpperCase(),
       };
 
   @override
-  List<Object?> get props => [eventId, callId, status, startedAt];
+  List<Object?> get props => [eventId, callId, status, startedAt, disconnectedBy];
 }

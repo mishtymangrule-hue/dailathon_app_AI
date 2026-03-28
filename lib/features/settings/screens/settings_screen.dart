@@ -236,6 +236,162 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
+
+                  const SizedBox(height: 32),
+
+                  // Appearance Section
+                  Text(
+                    'Appearance',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final themeMode = state is SettingsLoaded
+                          ? state.themeMode
+                          : 'system';
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Theme',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'light',
+                                  icon: Icon(Icons.light_mode),
+                                  label: Text('Light'),
+                                ),
+                                ButtonSegment(
+                                  value: 'dark',
+                                  icon: Icon(Icons.dark_mode),
+                                  label: Text('Dark'),
+                                ),
+                                ButtonSegment(
+                                  value: 'system',
+                                  icon: Icon(Icons.settings_brightness),
+                                  label: Text('System'),
+                                ),
+                              ],
+                              selected: {themeMode},
+                              onSelectionChanged: (selection) {
+                                context.read<SettingsBloc>().add(
+                                    ThemeModeChanged(
+                                        themeMode: selection.first));
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Blocked Numbers Section
+                  Text(
+                    'Blocked Numbers',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      final blocked = state is SettingsLoaded
+                          ? state.blockedNumbers
+                          : <String>[];
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${blocked.length} blocked',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _showAddBlockedNumberDialog(context),
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: const Text('Add'),
+                                ),
+                              ],
+                            ),
+                            if (blocked.isEmpty)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  'No blocked numbers',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade500),
+                                ),
+                              )
+                            else
+                              ...blocked.map((number) => ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Icons.block,
+                                        color: Colors.red, size: 20),
+                                    title: Text(number),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 20),
+                                      onPressed: () => context
+                                          .read<SettingsBloc>()
+                                          .add(BlockedNumberRemoved(
+                                              number: number)),
+                                    ),
+                                  )),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Battery Optimization Section
+                  Text(
+                    'Battery & Performance',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSettingCard(
+                    context,
+                    title: 'Battery Optimization',
+                    description:
+                        'Disable battery optimization for reliable call reception',
+                    onTap: () => _showBatteryOptimizationGuide(context),
+                  ),
                 ],
               ),
             ),
@@ -420,6 +576,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+
+  void _showAddBlockedNumberDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Block a Number'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            hintText: '+1234567890',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final number = controller.text.trim();
+              if (number.isNotEmpty) {
+                context
+                    .read<SettingsBloc>()
+                    .add(BlockedNumberAdded(number: number));
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBatteryOptimizationGuide(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Battery Optimization'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'To ensure reliable incoming calls, disable battery '
+                'optimization for this app:',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 12),
+              Text('1. Go to Settings → Battery → Battery Optimization',
+                  style: TextStyle(fontSize: 13)),
+              SizedBox(height: 4),
+              Text('2. Find "Dailathon" in the list',
+                  style: TextStyle(fontSize: 13)),
+              SizedBox(height: 4),
+              Text('3. Select "Don\'t optimize"',
+                  style: TextStyle(fontSize: 13)),
+              SizedBox(height: 12),
+              Text(
+                'For Xiaomi/Redmi/POCO devices, also enable '
+                '"Autostart" in Security → Manage apps.',
+                style: TextStyle(
+                    fontSize: 13, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showForwardingNumberDialog(
     BuildContext context,

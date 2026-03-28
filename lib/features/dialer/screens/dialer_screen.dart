@@ -192,64 +192,58 @@ class _DialerScreenState extends State<DialerScreen> {
               // ── Dialpad ────────────────────────────────────────────────
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Dialpad(
                     onDigitPressed: (digit) async {
                       await _haptic();
                       context.read<DialerBloc>().add(NumberChanged(
                           number: s.currentNumber + digit));
                     },
-                    onBackspacePressed: () async {
-                      await _haptic();
-                      context.read<DialerBloc>().add(NumberChanged(
-                          number: s.currentNumber.isNotEmpty
-                              ? s.currentNumber.substring(
-                                  0, s.currentNumber.length - 1)
-                              : ''));
-                    },
-                    onClearPressed: () async {
-                      await _haptic();
-                      context
-                          .read<DialerBloc>()
-                          .add(const NumberChanged(number: ''));
+                    onLongPressDigit: (digit) {
+                      context.read<DialerBloc>().add(
+                          SpeedDialLongPress(position: int.parse(digit)));
                     },
                   ),
                 ),
               ),
 
-              // ── Call button ────────────────────────────────────────────
+              // ── Call + Backspace row ───────────────────────────────────
               Padding(
-                padding: const EdgeInsets.only(bottom: 28),
+                padding: const EdgeInsets.fromLTRB(32, 8, 32, 28),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Redial last number (only when dialer is empty)
-                    if (s.currentNumber.isEmpty)
-                      GestureDetector(
-                        onTap: () async {
-                          // Get last dialed from call log
-                          try {
-                            final entries = await call_log_pkg.CallLog.get();
-                            final last = entries.firstWhere(
-                              (e) => e.callType == call_log_pkg.CallType.outgoing && e.number != null,
-                            );
-                            if (mounted && last.number != null) {
-                              context.read<DialerBloc>().add(NumberChanged(number: last.number!));
-                            }
-                          } catch (_) {}
-                        },
-                        child: Container(
-                          width: 48, height: 48,
-                          margin: const EdgeInsets.only(right: 20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.bg,
-                            shape: BoxShape.circle,
-                            boxShadow: AppTheme.raisedShadow(distance: 3, blur: 8),
-                          ),
-                          child: const Icon(Icons.restart_alt_rounded,
-                              color: AppTheme.textSecondary, size: 22),
-                        ),
-                      ),
+                    // Left: Redial last number (only when dialer is empty)
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: s.currentNumber.isEmpty
+                          ? GestureDetector(
+                              onTap: () async {
+                                try {
+                                  final entries = await call_log_pkg.CallLog.get();
+                                  final last = entries.firstWhere(
+                                    (e) => e.callType == call_log_pkg.CallType.outgoing && e.number != null,
+                                  );
+                                  if (mounted && last.number != null) {
+                                    context.read<DialerBloc>().add(NumberChanged(number: last.number!));
+                                  }
+                                } catch (_) {}
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bg,
+                                  shape: BoxShape.circle,
+                                  boxShadow: AppTheme.raisedShadow(distance: 3, blur: 8),
+                                ),
+                                child: const Icon(Icons.restart_alt_rounded,
+                                    color: AppTheme.textSecondary, size: 22),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+
+                    // Center: Call button
                     _CallButton(
                       enabled: s.currentNumber.isNotEmpty,
                       onTap: s.currentNumber.isEmpty
@@ -260,6 +254,36 @@ class _DialerScreenState extends State<DialerScreen> {
                                 simSlot: s.selectedSimSlot,
                               ),
                             ),
+                    ),
+
+                    // Right: Backspace (visible when number entered)
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: s.currentNumber.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () async {
+                                await _haptic();
+                                context.read<DialerBloc>().add(NumberChanged(
+                                    number: s.currentNumber.substring(
+                                        0, s.currentNumber.length - 1)));
+                              },
+                              onLongPress: () async {
+                                await _haptic();
+                                context.read<DialerBloc>()
+                                    .add(const NumberChanged(number: ''));
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bg,
+                                  shape: BoxShape.circle,
+                                  boxShadow: AppTheme.raisedShadow(distance: 3, blur: 8),
+                                ),
+                                child: const Icon(Icons.backspace_outlined,
+                                    color: AppTheme.textSecondary, size: 22),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ],
                 ),

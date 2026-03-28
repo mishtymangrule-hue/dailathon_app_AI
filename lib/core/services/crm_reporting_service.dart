@@ -56,7 +56,7 @@ class CrmReportingService {
       // Determine status from raw event
       final statusStr = raw['status'] as String?;
       final CallStatus status;
-      final UnansweredReason? unansweredReason;
+      UnansweredReason? unansweredReason;
       switch (statusStr) {
         case 'completed':
           status = CallStatus.answered;
@@ -77,11 +77,38 @@ class CrmReportingService {
               active > 0 ? null : UnansweredReason.noAnswer;
       }
 
+      // Use platform-provided unanswered reason if available
+      final platformReason = raw['unansweredReason'] as String?;
+      if (platformReason != null && platformReason.isNotEmpty && status != CallStatus.answered) {
+        unansweredReason = switch (platformReason) {
+          'LEAD_NO_ANSWER' => UnansweredReason.leadNoAnswer,
+          'LEAD_REJECTED' => UnansweredReason.leadRejected,
+          'EMPLOYEE_REJECTED_INCOMING' => UnansweredReason.employeeRejectedIncoming,
+          'EMPLOYEE_ENDED_BEFORE_CONNECT' => UnansweredReason.employeeEndedBeforeConnect,
+          'MISSED_INCOMING' => UnansweredReason.missedIncoming,
+          _ => unansweredReason,
+        };
+      }
+
       // Lookup CRM contact + attempt count
       var contactId = raw['contactId'] as String?;
       var attemptCount = 0;
       if (contactId != null) {
         attemptCount = await _crm.getAttemptCount(contactId);
+      }
+
+      // Map disconnectedBy from platform string to enum
+      final disconnectedByStr = raw['disconnectedBy'] as String?;
+      DisconnectedBy? disconnectedBy;
+      if (disconnectedByStr != null && disconnectedByStr.isNotEmpty) {
+        switch (disconnectedByStr.toUpperCase()) {
+          case 'USER':
+            disconnectedBy = DisconnectedBy.user;
+          case 'LEAD':
+            disconnectedBy = DisconnectedBy.lead;
+          case 'SYSTEM':
+            disconnectedBy = DisconnectedBy.system;
+        }
       }
 
       return CallEventPayload(
@@ -103,6 +130,7 @@ class CrmReportingService {
         employeeId: raw['employeeId'] as String?,
         simSlot: raw['simSlot'] as int?,
         attemptCount: attemptCount,
+        disconnectedBy: disconnectedBy,
       );
     } catch (e) {
       developer.log('CrmReportingService: failed to build payload — $e',

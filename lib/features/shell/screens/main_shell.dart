@@ -1,10 +1,12 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 
 /// Bottom-navigation shell that wraps the 4 persistent tabs:
 /// Home, Dialer, Contacts, Recents.
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
@@ -33,16 +35,75 @@ class MainShell extends StatelessWidget {
   ];
 
   @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  bool _isOffline = false;
+  Timer? _connectivityTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+    _connectivityTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkConnectivity(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _connectivityTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkConnectivity() async {
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      if (mounted) {
+        setState(() => _isOffline = result.isEmpty || result[0].rawAddress.isEmpty);
+      }
+    } on SocketException {
+      if (mounted) setState(() => _isOffline = true);
+    } on TimeoutException {
+      if (mounted) setState(() => _isOffline = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bg,
-      body: navigationShell,
+      body: Column(
+        children: [
+          if (_isOffline)
+            MaterialBanner(
+              backgroundColor: Colors.orange.shade800,
+              content: const Text(
+                'You are offline. Some features may not work.',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              leading:
+                  const Icon(Icons.wifi_off, color: Colors.white, size: 20),
+              actions: [
+                TextButton(
+                  onPressed: _checkConnectivity,
+                  child: const Text('Retry',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          Expanded(child: widget.navigationShell),
+        ],
+      ),
       bottomNavigationBar: _NeuBottomNav(
-        currentIndex: navigationShell.currentIndex,
-        items: _items,
-        onTap: (index) => navigationShell.goBranch(
+        currentIndex: widget.navigationShell.currentIndex,
+        items: MainShell._items,
+        onTap: (index) => widget.navigationShell.goBranch(
           index,
-          initialLocation: index == navigationShell.currentIndex,
+          initialLocation: index == widget.navigationShell.currentIndex,
         ),
       ),
     );

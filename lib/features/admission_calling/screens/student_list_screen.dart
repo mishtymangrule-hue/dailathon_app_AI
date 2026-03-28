@@ -166,6 +166,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       onCall: () => _call(list[i]),
                       onWhatsApp: () => _whatsApp(list[i]),
                       onSms: () => _sms(list[i]),
+                      onEdit: () => _showLeadForm(list[i]),
                     ),
                   ),
                 );
@@ -173,6 +174,118 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showLeadForm(null),
+        backgroundColor: AppTheme.primary,
+        child: const Icon(Icons.person_add, color: Colors.white),
+      ),
+    );
+  }
+
+  void _showLeadForm(Map<String, dynamic>? existing) {
+    final isEdit = existing != null;
+    final nameCtrl = TextEditingController(text: isEdit ? existing['name'] as String : '');
+    final phoneCtrl = TextEditingController(text: isEdit ? existing['phone'] as String : '');
+    final courseCtrl = TextEditingController(text: isEdit ? existing['course'] as String : '');
+    final noteCtrl = TextEditingController(text: isEdit ? existing['lastNote'] as String : '');
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              isEdit ? 'Edit Lead' : 'Add Lead',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: courseCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Course',
+                prefixIcon: Icon(Icons.school),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                prefixIcon: Icon(Icons.note),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final phone = phoneCtrl.text.trim();
+                if (name.isEmpty || phone.isEmpty) return;
+
+                setState(() {
+                  if (isEdit) {
+                    existing['name'] = name;
+                    existing['phone'] = phone;
+                    existing['course'] = courseCtrl.text.trim();
+                    existing['lastNote'] = noteCtrl.text.trim();
+                  } else {
+                    _students.insert(0, {
+                      'id': '${DateTime.now().millisecondsSinceEpoch}',
+                      'name': name,
+                      'phone': phone,
+                      'course': courseCtrl.text.trim(),
+                      'lastCall': DateTime.now(),
+                      'lastNote': noteCtrl.text.trim(),
+                      'visited': false,
+                      'docs': false,
+                      'callCount': 0,
+                    });
+                  }
+                });
+                Navigator.pop(ctx);
+              },
+              child: Text(isEdit ? 'Save' : 'Add Lead'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -212,12 +325,14 @@ class _StudentCard extends StatelessWidget {
     required this.onCall,
     required this.onWhatsApp,
     required this.onSms,
+    this.onEdit,
   });
 
   final Map<String, dynamic> student;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
   final VoidCallback onSms;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +497,17 @@ class _StudentCard extends StatelessWidget {
                   onTap: onSms,
                 ),
               ),
+              if (onEdit != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.edit_rounded,
+                    label: 'Edit',
+                    color: Colors.orange,
+                    onTap: onEdit!,
+                  ),
+                ),
+              ],
             ],
           ),
         ],

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/neu.dart';
 
-/// Neumorphic dialpad — 3×4 circular keys + backspace.
+/// Neumorphic dialpad — 3×4 circular keys.
+/// Backspace is handled externally (in the call-button row).
 class Dialpad extends StatelessWidget {
   const Dialpad({
     required this.onDigitPressed,
-    required this.onBackspacePressed,
-    required this.onClearPressed,
+    this.onLongPressDigit,
     super.key,
   });
 
   final void Function(String) onDigitPressed;
-  final VoidCallback onBackspacePressed;
-  final VoidCallback onClearPressed;
+  /// Called on long-press of digits 2-9 for speed dial.
+  final void Function(String)? onLongPressDigit;
 
   static const List<String> _digits = [
     '1', '2', '3',
@@ -31,29 +31,12 @@ class Dialpad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // 4 rows of 3 keys each
         _buildRow(0),
-        const SizedBox(height: 16),
         _buildRow(1),
-        const SizedBox(height: 16),
         _buildRow(2),
-        const SizedBox(height: 16),
         _buildRow(3),
-        const SizedBox(height: 16),
-        // Backspace
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            NeuDialKey(
-              label: '',
-              icon: Icons.backspace_outlined,
-              onTap: onBackspacePressed,
-              onLongPress: onClearPressed,
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -69,7 +52,11 @@ class Dialpad extends StatelessWidget {
             onTap: () => onDigitPressed(_digits[row * 3 + col]),
             onLongPress: _digits[row * 3 + col] == '0'
                 ? () => onDigitPressed('+')
-                : null,
+                : (onLongPressDigit != null &&
+                        int.tryParse(_digits[row * 3 + col]) != null &&
+                        int.parse(_digits[row * 3 + col]) >= 2)
+                    ? () => onLongPressDigit!(_digits[row * 3 + col])
+                    : null,
           ),
       ],
     );

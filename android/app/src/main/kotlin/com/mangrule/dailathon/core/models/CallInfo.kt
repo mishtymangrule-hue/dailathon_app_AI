@@ -18,6 +18,8 @@ data class CallInfo(
     val isHeld: Boolean,
     val simSlot: Int,
     val disconnectCause: String? = null,
+    val disconnectedBy: String? = null,
+    val unansweredReason: String? = null,
     val callType: String = "normal",  // "normal", "call_waiting", "conference"
     val callerName: String? = null,
     val callerPhotoUri: String? = null,
@@ -41,6 +43,8 @@ fun CallInfo.toMap(): Map<String, Any?> {
         "isHeld" to isHeld,
         "simSlot" to simSlot,
         "disconnectCause" to (disconnectCause ?: ""),
+        "disconnectedBy" to (disconnectedBy ?: ""),
+        "unansweredReason" to (unansweredReason ?: ""),
         "callType" to callType,
         "callerName" to (callerName ?: ""),
         "callerPhotoUri" to (callerPhotoUri ?: ""),

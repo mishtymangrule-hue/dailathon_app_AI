@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../../../core/utils/call_utils.dart';
@@ -9,7 +10,9 @@ class ContactsScreen extends StatefulWidget {
   State<ContactsScreen> createState() => _ContactsScreenState();
 }
 
-class _ContactsScreenState extends State<ContactsScreen> {
+class _ContactsScreenState extends State<ContactsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<Contact> _allContacts = [];
   List<Contact> _filteredContacts = [];
   bool _isLoading = true;
@@ -18,12 +21,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadContacts();
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -31,10 +36,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Future<void> _loadContacts() async {
     setState(() { _isLoading = true; });
 
-    // Fetch contacts with phone numbers only
+    // Fetch contacts with phone numbers and photos
     final contacts = await FlutterContacts.getContacts(
       withProperties: true,  // includes phone numbers
-      withPhoto: false,       // skip photos for performance
+      withPhoto: true,        // include thumbnails
     );
 
     // Sort alphabetically
@@ -85,31 +90,43 @@ class _ContactsScreenState extends State<ContactsScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search contacts...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          preferredSize: const Size.fromHeight(100),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search contacts...',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
-            ),
+              TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: Colors.white,
+                tabs: const [
+                  Tab(text: 'All'),
+                  Tab(icon: Icon(Icons.star), text: 'Favorites'),
+                ],
+              ),
+            ],
           ),
         ),
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await FlutterContacts.openExternalInsert();
-        },
+        onPressed: () => _showAddContactForm(context),
         backgroundColor: Colors.blue,
         child: const Icon(Icons.person_add, color: Colors.white),
       ),
@@ -122,8 +139,19 @@ class _ContactsScreenState extends State<ContactsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildContactList(_filteredContacts),
+        _buildContactList(
+            _filteredContacts.where((c) => c.isStarred).toList()),
+      ],
+    );
+  }
+
+  Widget _buildContactList(List<Contact> contacts) {
     // No contacts found
-    if (_filteredContacts.isEmpty) {
+    if (contacts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -132,7 +160,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             const SizedBox(height: 16),
             Text(
               _searchController.text.isEmpty
-                  ? 'No contacts found on device'
+                  ? 'No contacts found'
                   : 'No results for "${_searchController.text}"',
               style: const TextStyle(color: Colors.grey),
             ),
@@ -142,7 +170,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
 
     // Grouped contact list
-    final grouped = _groupContacts(_filteredContacts);
+    final grouped = _groupContacts(contacts);
 
     return RefreshIndicator(
       onRefresh: _loadContacts,
@@ -150,7 +178,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         itemCount: grouped.length,
         itemBuilder: (context, index) {
           final letter = grouped.keys.elementAt(index);
-          final contacts = grouped[letter]!;
+          final groupContacts = grouped[letter]!;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -170,10 +198,99 @@ class _ContactsScreenState extends State<ContactsScreen> {
                 ),
               ),
               // Contacts in this section
-              ...contacts.map((contact) => _ContactTile(contact: contact)),
+              ...groupContacts.map((contact) => _ContactTile(
+                    contact: contact,
+                    onEdit: () => _showEditContactForm(context, contact),
+                  )),
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showAddContactForm(BuildContext context) {
+    _showContactForm(context, null);
+  }
+
+  void _showEditContactForm(BuildContext context, Contact contact) {
+    _showContactForm(context, contact);
+  }
+
+  void _showContactForm(BuildContext context, Contact? existing) {
+    final nameController =
+        TextEditingController(text: existing?.displayName ?? '');
+    final phoneController = TextEditingController(
+        text: existing?.phones.isNotEmpty == true
+            ? existing!.phones.first.number
+            : '');
+    final isEdit = existing != null;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              isEdit ? 'Edit Contact' : 'Add Contact',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                if (name.isEmpty || phone.isEmpty) return;
+
+                final contact = existing ?? Contact();
+                contact.name = Name(first: name);
+                contact.phones = [Phone(phone)];
+
+                if (isEdit) {
+                  await FlutterContacts.updateContact(contact);
+                } else {
+                  await FlutterContacts.insertContact(contact);
+                }
+
+                if (ctx.mounted) Navigator.pop(ctx);
+                _loadContacts();
+              },
+              child: Text(isEdit ? 'Save' : 'Add'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -181,7 +298,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
 class _ContactTile extends StatelessWidget {
   final Contact contact;
-  const _ContactTile({required this.contact});
+  final VoidCallback? onEdit;
+  const _ContactTile({required this.contact, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -191,14 +309,18 @@ class _ContactTile extends StatelessWidget {
     final initial = contact.displayName.isNotEmpty
         ? contact.displayName[0].toUpperCase()
         : '?';
+    final Uint8List? photo = contact.photo;
 
     return ListTile(
       onTap: () => _showContactDetail(context),
       leading: CircleAvatar(
         backgroundColor: Colors.blue,
-        child: Text(initial,
-            style: const TextStyle(color: Colors.white,
-                fontWeight: FontWeight.bold)),
+        backgroundImage: photo != null ? MemoryImage(photo) : null,
+        child: photo == null
+            ? Text(initial,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold))
+            : null,
       ),
       title: Text(contact.displayName,
           style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -233,6 +355,7 @@ class _ContactTile extends StatelessWidget {
         final initial = contact.displayName.isNotEmpty
             ? contact.displayName[0].toUpperCase()
             : '?';
+        final Uint8List? photo = contact.photo;
         return Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -241,11 +364,14 @@ class _ContactTile extends StatelessWidget {
               CircleAvatar(
                 radius: 40,
                 backgroundColor: Colors.blue,
-                child: Text(initial,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold)),
+                backgroundImage: photo != null ? MemoryImage(photo) : null,
+                child: photo == null
+                    ? Text(initial,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold))
+                    : null,
               ),
               const SizedBox(height: 16),
               Text(contact.displayName,
@@ -289,6 +415,16 @@ class _ContactTile extends StatelessWidget {
                   padding: EdgeInsets.all(16),
                   child: Text('No phone numbers',
                       style: TextStyle(color: Colors.grey)),
+                ),
+              const SizedBox(height: 12),
+              if (onEdit != null)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    onEdit!();
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit Contact'),
                 ),
             ],
           ),

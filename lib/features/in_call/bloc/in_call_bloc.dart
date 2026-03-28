@@ -35,6 +35,7 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
     on<DeclineWaitingCall>(_onDeclineWaitingCall);
     on<CallEnded>(_onCallEnded);
     on<AudioRoutesUpdated>(_onAudioRoutesUpdated);
+    on<AudioRouteSelected>(_onAudioRouteSelected);
 
     _startListeningToCallEvents();
   }
@@ -256,6 +257,29 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
     }
   }
 
+  Future<void> _onAudioRouteSelected(
+    AudioRouteSelected event,
+    Emitter<InCallState> emit,
+  ) async {
+    try {
+      switch (event.route) {
+        case 'speaker':
+          await _callMethodChannel.setSpeaker(true);
+        case 'bluetooth':
+          await _callMethodChannel.setBluetoothAudio(true);
+        case 'earpiece':
+          await _callMethodChannel.setSpeaker(false);
+          await _callMethodChannel.setBluetoothAudio(false);
+        case 'wired_headset':
+          // Wired headset is auto-routed by the system; disable speaker/BT
+          await _callMethodChannel.setSpeaker(false);
+          await _callMethodChannel.setBluetoothAudio(false);
+      }
+    } catch (e) {
+      addError(e);
+    }
+  }
+
   Future<void> _reportEndedCall(CallInfo callInfo, {String? cause}) async {
     if (_reportingService == null) return;
     final now = DateTime.now();
@@ -278,6 +302,8 @@ class InCallBloc extends Bloc<InCallEvent, InCallState> {
       'ringingDurationSeconds': ringing.clamp(0, 3600),
       'activeDurationSeconds': active.clamp(0, 86400),
       'simSlot': callInfo.simSlot,
+      'disconnectedBy': callInfo.disconnectedBy,
+      'unansweredReason': callInfo.unansweredReason,
     });
 
     // Reset timers

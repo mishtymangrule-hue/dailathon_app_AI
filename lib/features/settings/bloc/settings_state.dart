@@ -29,6 +29,8 @@ class SettingsLoaded extends SettingsState {
     this.callWaitingEnabled = false,
     this.powerButtonEndCall = false,
     this.volumeButtonBehavior = 'mute',
+    this.themeMode = 'system',
+    this.blockedNumbers = const [],
   });
 
   final String unconditionalForwarding;
@@ -43,6 +45,8 @@ class SettingsLoaded extends SettingsState {
   final bool callWaitingEnabled;
   final bool powerButtonEndCall;
   final String volumeButtonBehavior;
+  final String themeMode;
+  final List<String> blockedNumbers;
 
   bool getForwardingEnabled(String type) {
     switch (type) {
@@ -88,6 +92,8 @@ class SettingsLoaded extends SettingsState {
     callWaitingEnabled,
     powerButtonEndCall,
     volumeButtonBehavior,
+    themeMode,
+    blockedNumbers,
   ];
 }
 

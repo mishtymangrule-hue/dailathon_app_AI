@@ -36,6 +36,9 @@
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
     <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission
         android:name="android.permission.BLUETOOTH_CONNECT"
         android:minSdkVersion="31" />
     <uses-permission
@@ -72,6 +75,15 @@
 
     <!-- Reschedule alarms after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Battery optimization (for reliable background operation) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Lock screen overlay for incoming calls -->
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+
+    <!-- Network state control -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
     <!-- REQUIRED for url_launcher on Android 11+ -->
     <queries>

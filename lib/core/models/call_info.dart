@@ -25,6 +25,8 @@ class CallInfo extends Equatable {
     this.conferenceMemberIds = const [],
     this.simSlot = 0,
     this.disconnectCause,
+    this.disconnectedBy,
+    this.unansweredReason,
     this.callType = 'normal',  // 'normal', 'call_waiting', 'conference'
     this.callerCrmStatus,
   });
@@ -48,6 +50,12 @@ class CallInfo extends Equatable {
       conferenceMemberIds: List<String>.from(map['conferenceParticipants'] ?? []),
       simSlot: map['simSlot'] ?? 0,
       disconnectCause: map['disconnectCause'],
+      disconnectedBy: map['disconnectedBy'] is String && (map['disconnectedBy'] as String).isNotEmpty
+          ? map['disconnectedBy'] as String
+          : null,
+      unansweredReason: map['unansweredReason'] is String && (map['unansweredReason'] as String).isNotEmpty
+          ? map['unansweredReason'] as String
+          : null,
       callType: map['callType'] ?? 'normal',
     );
 
@@ -66,6 +74,8 @@ class CallInfo extends Equatable {
   final List<String> conferenceMemberIds;
   final int simSlot;
   final String? disconnectCause;
+  final String? disconnectedBy;   // 'USER' | 'LEAD' | 'SYSTEM'
+  final String? unansweredReason; // e.g. 'LEAD_NO_ANSWER', 'EMPLOYEE_REJECTED_INCOMING'
   final String callType;
 
   /// CRM lookup status: null = not yet checked, 'known' = found in CRM,
@@ -101,6 +111,8 @@ class CallInfo extends Equatable {
         conferenceMemberIds,
         simSlot,
         disconnectCause,
+        disconnectedBy,
+        unansweredReason,
         callType,
         callerCrmStatus,
       ];

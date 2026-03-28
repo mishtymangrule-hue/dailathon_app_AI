@@ -162,7 +162,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Column(
                     children: [
-                      // Row 1: Mute, Speaker, Bluetooth
+                      // Row 1: Mute, Audio Route
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -177,24 +177,14 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                             },
                           ),
                           _buildControlButton(
-                            icon: Icons.volume_up,
-                            label: 'Speaker',
-                            isActive: callInfo.isSpeakerEnabled,
-                            onPressed: () {
-                              context.read<InCallBloc>().add(
-                                    SpeakerToggled(callInfo.isSpeakerEnabled),
-                                  );
-                            },
-                          ),
-                          _buildControlButton(
-                            icon: Icons.bluetooth_audio,
-                            label: 'BT',
-                            isActive: callInfo.isBluetoothAudio,
-                            onPressed: () {
-                              context.read<InCallBloc>().add(
-                                    BluetoothToggled(callInfo.isBluetoothAudio),
-                                  );
-                            },
+                            icon: _audioRouteIcon(callInfo),
+                            label: _audioRouteLabel(callInfo),
+                            isActive: callInfo.isSpeakerEnabled || callInfo.isBluetoothAudio,
+                            onPressed: () => _showAudioRouteSheet(
+                              context,
+                              state is InCallActive ? state.availableAudioRoutes : [],
+                              callInfo,
+                            ),
                           ),
                         ],
                       ),
@@ -400,6 +390,122 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
         ),
       ],
     );
+  }
+
+  IconData _audioRouteIcon(CallInfo callInfo) {
+    if (callInfo.isBluetoothAudio) return Icons.bluetooth_audio;
+    if (callInfo.isSpeakerEnabled) return Icons.volume_up;
+    return Icons.hearing;
+  }
+
+  String _audioRouteLabel(CallInfo callInfo) {
+    if (callInfo.isBluetoothAudio) return 'Bluetooth';
+    if (callInfo.isSpeakerEnabled) return 'Speaker';
+    return 'Earpiece';
+  }
+
+  void _showAudioRouteSheet(
+    BuildContext context,
+    List<String> availableRoutes,
+    CallInfo callInfo,
+  ) {
+    // Fallback routes if the platform hasn't reported any
+    final routes = availableRoutes.isNotEmpty
+        ? availableRoutes
+        : ['earpiece', 'speaker'];
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.grey.shade900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Audio Output',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...routes.map((route) {
+              final isSelected = _isRouteActive(route, callInfo);
+              return ListTile(
+                leading: Icon(
+                  _iconForRoute(route),
+                  color: isSelected ? Colors.blue : Colors.white,
+                ),
+                title: Text(
+                  _labelForRoute(route),
+                  style: TextStyle(
+                    color: isSelected ? Colors.blue : Colors.white,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check, color: Colors.blue)
+                    : null,
+                onTap: () {
+                  context.read<InCallBloc>().add(AudioRouteSelected(route));
+                  Navigator.pop(context);
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isRouteActive(String route, CallInfo callInfo) {
+    switch (route) {
+      case 'speaker':
+        return callInfo.isSpeakerEnabled;
+      case 'bluetooth':
+        return callInfo.isBluetoothAudio;
+      case 'earpiece':
+        return !callInfo.isSpeakerEnabled && !callInfo.isBluetoothAudio;
+      case 'wired_headset':
+        return false; // Can't distinguish from earpiece at BLoC level
+      default:
+        return false;
+    }
+  }
+
+  IconData _iconForRoute(String route) {
+    switch (route) {
+      case 'speaker':
+        return Icons.volume_up;
+      case 'bluetooth':
+        return Icons.bluetooth_audio;
+      case 'wired_headset':
+        return Icons.headset;
+      case 'earpiece':
+      default:
+        return Icons.hearing;
+    }
+  }
+
+  String _labelForRoute(String route) {
+    switch (route) {
+      case 'speaker':
+        return 'Speaker';
+      case 'bluetooth':
+        return 'Bluetooth';
+      case 'wired_headset':
+        return 'Wired Headset';
+      case 'earpiece':
+      default:
+        return 'Earpiece';
+    }
   }
 
   String _formatDuration(Duration duration) {

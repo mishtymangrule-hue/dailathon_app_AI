@@ -101,6 +101,14 @@ class AudioRoutesUpdated extends InCallEvent {
   List<Object?> get props => [availableRoutes];
 }
 
+class AudioRouteSelected extends InCallEvent {
+  const AudioRouteSelected(this.route);
+  final String route;
+
+  @override
+  List<Object?> get props => [route];
+}
+
 class CallEnded extends InCallEvent {
   const CallEnded({this.cause});
   final String? cause;

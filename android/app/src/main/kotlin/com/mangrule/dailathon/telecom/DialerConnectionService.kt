@@ -156,4 +156,31 @@ class DialerConnectionService : ConnectionService() {
         return null
     }
 
+    /**
+     * Called when the system fails to create an outgoing connection.
+     */
+    override fun onCreateOutgoingConnectionFailed(
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?,
+    ) {
+        Timber.e(
+            "onCreateOutgoingConnectionFailed: account=$connectionManagerPhoneAccount, " +
+                    "address=${request?.address}"
+        )
+        super.onCreateOutgoingConnectionFailed(connectionManagerPhoneAccount, request)
+    }
+
+    /**
+     * Called when the system fails to create an incoming connection.
+     */
+    override fun onCreateIncomingConnectionFailed(
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?,
+    ) {
+        Timber.e(
+            "onCreateIncomingConnectionFailed: account=$connectionManagerPhoneAccount, " +
+                    "address=${request?.address}"
+        )
+        super.onCreateIncomingConnectionFailed(connectionManagerPhoneAccount, request)
+    }
 }

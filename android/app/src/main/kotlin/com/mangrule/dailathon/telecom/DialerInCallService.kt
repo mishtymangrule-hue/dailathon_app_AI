@@ -9,6 +9,7 @@ import javax.inject.Inject
 import com.mangrule.dailathon.presentation.channels.CallEventChannelService
 import com.mangrule.dailathon.core.models.CallInfo
 import com.mangrule.dailathon.core.models.CallState
+import com.mangrule.dailathon.core.models.DisconnectCauseMapper
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -45,6 +46,9 @@ class DialerInCallService : InCallService() {
     private val activeCalls = mutableListOf<Call>()
     private var activeCall: Call? = null
     private var heldCall: Call? = null
+
+    // Track call start times for duration calculation
+    private val callStartTimes = mutableMapOf<Call, Long>()
 
     override fun onCreate() {
         super.onCreate()
@@ -142,20 +146,20 @@ class DialerInCallService : InCallService() {
         when (call.state) {
             Call.STATE_ACTIVE -> {
                 activeCall = call
-                // Notify Flutter UI
-                // Start call duration timer
-                // Begin audio session
+                // Record start time when call becomes active
+                if (!callStartTimes.containsKey(call)) {
+                    callStartTimes[call] = android.os.SystemClock.elapsedRealtime()
+                }
             }
             Call.STATE_HOLDING -> {
                 heldCall = call
-                // Notify Flutter UI
             }
             Call.STATE_DIALING, Call.STATE_RINGING -> {
                 // Call not yet finalized
             }
             Call.STATE_DISCONNECTED -> {
-                // Call ended
                 activeCalls.remove(call)
+                callStartTimes.remove(call)
             }
         }
     }
@@ -328,17 +332,57 @@ class DialerInCallService : InCallService() {
                     else -> CallState.UNKNOWN
                 }
                 
+                // Calculate real duration from tracked start time
+                val startTime = callStartTimes[call]
+                val durationSecs = if (startTime != null) {
+                    ((android.os.SystemClock.elapsedRealtime() - startTime) / 1000).toInt()
+                } else 0
+
+                // Resolve SIM slot from phone account
+                val resolvedSimSlot = try {
+                    call.details.accountHandle?.id?.toIntOrNull() ?: 0
+                } catch (_: Exception) { 0 }
+
+                // Classify disconnect cause
+                val disconnectCauseStr = if (call.state == Call.STATE_DISCONNECTED) {
+                    classifyDisconnectCause(call.details.disconnectCause)
+                } else null
+
+                // Determine who ended the call and unanswered reason
+                val isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING
+                val direction = if (isOutgoing) "OUTGOING" else "INCOMING"
+                val callStateStr = when (call.state) {
+                    Call.STATE_DIALING -> "DIALING"
+                    Call.STATE_RINGING -> "RINGING"
+                    Call.STATE_ACTIVE -> "ACTIVE"
+                    else -> "UNKNOWN"
+                }
+                val disconnectedByStr = if (call.state == Call.STATE_DISCONNECTED) {
+                    DisconnectCauseMapper.mapDisconnectedBy(
+                        call.details.disconnectCause, callStateStr, direction
+                    ).name
+                } else null
+                val wasAnswered = durationSecs > 0
+                val unansweredReasonStr = if (call.state == Call.STATE_DISCONNECTED && !wasAnswered) {
+                    DisconnectCauseMapper.mapUnansweredReason(
+                        call.details.disconnectCause, direction
+                    )
+                } else null
+
                 val callInfo = CallInfo(
                     callId = call.details.handle?.schemeSpecificPart ?: "",
                     number = call.details.handle?.schemeSpecificPart ?: "",
                     state = callState,
-                    duration = 0.seconds,
-                    isOutgoing = call.details.callDirection == Call.Details.DIRECTION_OUTGOING,
+                    duration = durationSecs.seconds,
+                    isOutgoing = isOutgoing,
                     isMuted = muted,
                     isBluetoothAudio = bluetooth,
                     isSpeakerEnabled = speaker,
                     isHeld = call.state == Call.STATE_HOLDING,
-                    simSlot = 0
+                    simSlot = resolvedSimSlot,
+                    disconnectCause = disconnectCauseStr,
+                    disconnectedBy = disconnectedByStr,
+                    unansweredReason = unansweredReasonStr,
                 )
                 
                 eventChannelService.pushCallStateUpdate(callInfo)
@@ -350,6 +394,25 @@ class DialerInCallService : InCallService() {
             )
         } catch (e: Exception) {
             Timber.e(e, "Error pushing call list event")
+        }
+    }
+
+    /**
+     * Map Android DisconnectCause to a human-readable classification.
+     */
+    private fun classifyDisconnectCause(cause: android.telecom.DisconnectCause?): String {
+        return when (cause?.code) {
+            android.telecom.DisconnectCause.BUSY -> "busy"
+            android.telecom.DisconnectCause.REMOTE -> "remote_hangup"
+            android.telecom.DisconnectCause.LOCAL -> "local_hangup"
+            android.telecom.DisconnectCause.CANCELED -> "canceled"
+            android.telecom.DisconnectCause.MISSED -> "missed"
+            android.telecom.DisconnectCause.REJECTED -> "rejected"
+            android.telecom.DisconnectCause.RESTRICTED -> "restricted"
+            android.telecom.DisconnectCause.ERROR -> "error"
+            android.telecom.DisconnectCause.OTHER -> "other"
+            android.telecom.DisconnectCause.UNKNOWN -> "unknown"
+            else -> "unknown"
         }
     }
 }

@@ -4,6 +4,7 @@ import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
 import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
 import 'package:dailathon_dialer/core/models/call_info.dart';
 import 'package:dailathon_dialer/core/service_locator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Full-screen incoming call UI for the Flutter layer.
 /// Displayed when incoming call notification is tapped or during active calls.
@@ -225,7 +226,13 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     onPressed: _declineCall,
                   ),
 
-                  const SizedBox(width: 32),
+                  // Reject with SMS button
+                  _buildActionButton(
+                    icon: Icons.sms,
+                    label: 'SMS',
+                    color: Colors.orange,
+                    onPressed: () => _showRejectWithSmsSheet(context),
+                  ),
 
                   // Answer button
                   _buildActionButton(
@@ -287,6 +294,111 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   String _getInitials() {
     final name = widget.displayName ?? widget.phoneNumber;
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  void _showRejectWithSmsSheet(BuildContext context) {
+    const templates = [
+      "Can't talk right now. What's up?",
+      "I'll call you back later.",
+      "I'm in a meeting.",
+      "I'll be available shortly.",
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.grey.shade900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Reject with SMS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...templates.map((msg) => ListTile(
+                  leading: const Icon(Icons.sms, color: Colors.white70),
+                  title: Text(msg,
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _sendSmsAndDecline(msg);
+                  },
+                )),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.white70),
+              title: const Text('Custom message...',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showCustomSmsDialog(context);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCustomSmsDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.grey.shade900,
+        title: const Text('Custom Message',
+            style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Type a message...',
+            hintStyle: TextStyle(color: Colors.grey.shade500),
+            border: const OutlineInputBorder(),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey.shade600),
+            ),
+          ),
+          maxLines: 2,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final msg = controller.text.trim();
+              if (msg.isNotEmpty) {
+                Navigator.pop(dialogCtx);
+                _sendSmsAndDecline(msg);
+              }
+            },
+            child: const Text('Send & Decline'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendSmsAndDecline(String message) {
+    final uri = Uri(
+      scheme: 'sms',
+      path: widget.phoneNumber,
+      queryParameters: {'body': message},
+    );
+    launchUrl(uri);
+    _declineCall();
   }
 
   void _answerCall() {

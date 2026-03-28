@@ -20,6 +20,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<CallWaitingToggled>(_onCallWaitingToggled);
     on<PowerButtonEndCallToggled>(_onPowerButtonEndCallToggled);
     on<VolumeButtonBehaviorChanged>(_onVolumeButtonBehaviorChanged);
+    on<ThemeModeChanged>(_onThemeModeChanged);
+    on<BlockedNumberAdded>(_onBlockedNumberAdded);
+    on<BlockedNumberRemoved>(_onBlockedNumberRemoved);
   }
 
   // ignore: unused_field
@@ -219,6 +222,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     bool? callWaitingEnabled,
     bool? powerButtonEndCall,
     String? volumeButtonBehavior,
+    String? themeMode,
+    List<String>? blockedNumbers,
   }) =>
       SettingsLoaded(
         unconditionalForwarding: s.unconditionalForwarding,
@@ -233,6 +238,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         callWaitingEnabled: callWaitingEnabled ?? s.callWaitingEnabled,
         powerButtonEndCall: powerButtonEndCall ?? s.powerButtonEndCall,
         volumeButtonBehavior: volumeButtonBehavior ?? s.volumeButtonBehavior,
+        themeMode: themeMode ?? s.themeMode,
+        blockedNumbers: blockedNumbers ?? s.blockedNumbers,
       );
 
   void _onCallWaitingToggled(
@@ -262,6 +269,41 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     final s = state;
     if (s is SettingsLoaded) {
       emit(_copyWithExtra(s, volumeButtonBehavior: event.behavior));
+    }
+  }
+
+  void _onThemeModeChanged(
+    ThemeModeChanged event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      emit(_copyWithExtra(s, themeMode: event.themeMode));
+    }
+  }
+
+  void _onBlockedNumberAdded(
+    BlockedNumberAdded event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      if (!s.blockedNumbers.contains(event.number)) {
+        emit(_copyWithExtra(s,
+            blockedNumbers: [...s.blockedNumbers, event.number]));
+      }
+    }
+  }
+
+  void _onBlockedNumberRemoved(
+    BlockedNumberRemoved event,
+    Emitter<SettingsState> emit,
+  ) {
+    final s = state;
+    if (s is SettingsLoaded) {
+      emit(_copyWithExtra(s,
+          blockedNumbers:
+              s.blockedNumbers.where((n) => n != event.number).toList()));
     }
   }
 }

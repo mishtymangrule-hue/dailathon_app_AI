@@ -79,3 +79,27 @@ class VolumeButtonBehaviorChanged extends SettingsEvent {
   @override
   List<Object?> get props => [behavior];
 }
+
+class ThemeModeChanged extends SettingsEvent {
+  const ThemeModeChanged({required this.themeMode});
+  final String themeMode; // 'light', 'dark', 'system'
+
+  @override
+  List<Object?> get props => [themeMode];
+}
+
+class BlockedNumberAdded extends SettingsEvent {
+  const BlockedNumberAdded({required this.number});
+  final String number;
+
+  @override
+  List<Object?> get props => [number];
+}
+
+class BlockedNumberRemoved extends SettingsEvent {
+  const BlockedNumberRemoved({required this.number});
+  final String number;
+
+  @override
+  List<Object?> get props => [number];
+}
