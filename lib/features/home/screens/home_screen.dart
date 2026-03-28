@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/neu.dart';
-import '../bloc/home_bloc.dart';
 import '../../notifications/bloc/notifications_bloc.dart';
 
 /// Home / Modules Screen — stats dashboard + CRM module cards.
@@ -19,7 +18,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<HomeBloc>().add(const CheckDefaultDialerRequested());
   }
 
   void _openAdmission() {
@@ -151,72 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppTheme.success,
                 ),
               ],
-            ),
-            const SizedBox(height: 28),
-
-            // ── Default dialer status banner ───────────────────────────────
-            BlocBuilder<HomeBloc, HomeState>(
-              builder: (ctx, state) {
-                final isDefault =
-                    state is HomeLoaded && state.isDefaultDialer;
-                return NeuCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: (isDefault
-                                  ? AppTheme.success
-                                  : AppTheme.info)
-                              .withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          isDefault
-                              ? Icons.verified_rounded
-                              : Icons.info_rounded,
-                          color: isDefault
-                              ? AppTheme.success
-                              : AppTheme.info,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isDefault
-                                  ? 'Default Dialer Active'
-                                  : 'Not Default Dialer',
-                              style: TextStyle(
-                                color: isDefault
-                                    ? AppTheme.success
-                                    : AppTheme.info,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              isDefault
-                                  ? 'Receiving all incoming calls'
-                                  : 'Tap Settings → Set as default dialer',
-                              style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
             ),
             const SizedBox(height: 28),
 

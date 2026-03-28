@@ -7,6 +7,7 @@ import 'features/home/bloc/home_bloc.dart';
 import 'features/notifications/bloc/notifications_bloc.dart';
 import 'features/call_sync/bloc/call_sync_bloc.dart';
 import 'features/permissions/screens/permission_gate_screen.dart';
+import 'features/permissions/screens/default_dialer_gate_screen.dart';
 import 'router.dart';
 
 class DialerApp extends StatefulWidget {
@@ -63,7 +64,10 @@ class _DialerAppState extends State<DialerApp> {
           theme: AppTheme.light(),
           routerConfig: router,
           builder: (context, child) => PermissionGateScreen(
-            child: child ?? const SizedBox.shrink(),
+            child: DefaultDialerGateScreen(
+              channel: ServiceLocator().callMethodChannel,
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
         ),
       );

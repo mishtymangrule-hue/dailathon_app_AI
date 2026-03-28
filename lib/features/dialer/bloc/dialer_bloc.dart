@@ -107,9 +107,12 @@ class DialerBloc extends Bloc<DialerEvent, DialerState> {
         selectedSimSlot: currentState.selectedSimSlot,
       ));
     } catch (e) {
+      emit(DialerError(error: e.toString()));
+      // Restore active state so the screen recovers
       emit(DialerActive(
         currentNumber: currentState.currentNumber,
         selectedSimSlot: currentState.selectedSimSlot,
+        availableSims: currentState.availableSims,
       ));
     }
   }

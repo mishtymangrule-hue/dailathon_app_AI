@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/neu.dart';
 
-/// Blocking permission gate that prevents app access until all required
-/// permissions are granted.  If any is denied the user sees an explanation
-/// screen and can retry or open system settings.
+/// Hard gate: the app cannot be used until every required runtime permission
+/// is granted. Battery-optimisation and call-forwarding are intentionally
+/// excluded because they are either non-runtime grants or optional features.
+///
+/// Layout when permissions are missing:
+///    Full-screen blocking UI listing every missing permission
+///    "Grant permissions" triggers the system dialog immediately
+///    If any are permanently denied  "Open App Settings" + re-check button
+///    No skip / dismiss option
 class PermissionGateScreen extends StatefulWidget {
+  const PermissionGateScreen({super.key, required this.child});
   final Widget child;
-  const PermissionGateScreen({Key? key, required this.child}) : super(key: key);
 
   @override
   State<PermissionGateScreen> createState() => _PermissionGateScreenState();
@@ -15,21 +22,25 @@ class PermissionGateScreen extends StatefulWidget {
 
 class _PermissionGateScreenState extends State<PermissionGateScreen>
     with WidgetsBindingObserver {
+
+  //  Required runtime permissions 
+  // Call forwarding and battery optimisation are intentionally excluded.
+  static const _required = <Permission>[
+    Permission.phone,          // CALL_PHONE + READ_PHONE_STATE
+    Permission.microphone,     // RECORD_AUDIO (active call audio)
+    Permission.contacts,       // READ_CONTACTS
+    Permission.notification,   // POST_NOTIFICATIONS (API 33+)
+  ];
+
   bool _checking = true;
   bool _allGranted = false;
-  final List<_PermissionInfo> _denied = [];
-
-  static const _required = <Permission>[
-    Permission.phone,
-    Permission.contacts,
-    Permission.notification,
-  ];
+  List<_PermEntry> _denied = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkAndRequest();
+    _requestAll();
   }
 
   @override
@@ -38,7 +49,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     super.dispose();
   }
 
-  /// Re-check when returning from system settings.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_allGranted) {
@@ -46,115 +56,124 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     }
   }
 
-  Future<void> _checkAndRequest() async {
-    setState(() { _checking = true; _denied.clear(); });
+  //  Permission logic 
 
+  Future<void> _requestAll() async {
+    setState(() { _checking = true; });
     final statuses = await _required.request();
-
-    _evaluateStatuses(statuses);
+    _evaluate(statuses);
   }
 
-  /// Silent check (no system dialog) — used when returning from settings.
   Future<void> _checkOnly() async {
-    setState(() { _checking = true; _denied.clear(); });
-
-    final Map<Permission, PermissionStatus> statuses = {};
+    setState(() { _checking = true; });
+    final statuses = <Permission, PermissionStatus>{};
     for (final p in _required) {
       statuses[p] = await p.status;
     }
-
-    _evaluateStatuses(statuses);
+    _evaluate(statuses);
   }
 
-  void _evaluateStatuses(Map<Permission, PermissionStatus> statuses) {
-    final denied = <_PermissionInfo>[];
-
+  void _evaluate(Map<Permission, PermissionStatus> statuses) {
+    final denied = <_PermEntry>[];
     for (final entry in statuses.entries) {
       if (!entry.value.isGranted) {
-        denied.add(_PermissionInfo(
+        denied.add(_PermEntry(
           permission: entry.key,
-          label: _label(entry.key),
-          description: _description(entry.key),
-          icon: _icon(entry.key),
           permanentlyDenied: entry.value.isPermanentlyDenied,
         ));
       }
     }
-
     setState(() {
       _checking = false;
       _allGranted = denied.isEmpty;
-      _denied
-        ..clear()
-        ..addAll(denied);
+      _denied = denied;
     });
   }
 
-  // ── helpers ──────────────────────────────────────────────────────────────
-
-  static String _label(Permission p) {
-    switch (p) {
-      case Permission.phone:
-        return 'Phone';
-      case Permission.contacts:
-        return 'Contacts';
-      case Permission.notification:
-        return 'Notifications';
-      default:
-        return p.toString();
-    }
-  }
-
-  static String _description(Permission p) {
-    switch (p) {
-      case Permission.phone:
-        return 'Required to make and manage calls.';
-      case Permission.contacts:
-        return 'Required to access your contact list.';
-      case Permission.notification:
-        return 'Required to alert you of incoming calls.';
-      default:
-        return 'This permission is required for the app to function.';
-    }
-  }
-
-  static IconData _icon(Permission p) {
-    switch (p) {
-      case Permission.phone:
-        return Icons.phone_rounded;
-      case Permission.contacts:
-        return Icons.contacts_rounded;
-      case Permission.notification:
-        return Icons.notifications_rounded;
-      default:
-        return Icons.security_rounded;
-    }
-  }
-
-  // ── UI ───────────────────────────────────────────────────────────────────
+  //  Build 
 
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFE0E5EC),
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const _SplashCheck();
     }
-
     if (_allGranted) return widget.child;
+    return _PermissionBlocker(
+      denied: _denied,
+      onGrant: _requestAll,
+      onRecheck: _checkOnly,
+    );
+  }
+}
 
-    final hasPermanent = _denied.any((d) => d.permanentlyDenied);
+//  Splash while checking 
 
+class _SplashCheck extends StatelessWidget {
+  const _SplashCheck();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppTheme.bg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5),
+            SizedBox(height: 18),
+            Text(
+              'Checking permissions',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+//  Blocker screen 
+
+class _PermissionBlocker extends StatelessWidget {
+  const _PermissionBlocker({
+    required this.denied,
+    required this.onGrant,
+    required this.onRecheck,
+  });
+
+  final List<_PermEntry> denied;
+  final VoidCallback onGrant;
+  final VoidCallback onRecheck;
+
+  bool get _hasPermanent => denied.any((e) => e.permanentlyDenied);
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 2),
-              Icon(Icons.shield_rounded, size: 72, color: AppTheme.primary),
+              const SizedBox(height: 40),
+              //  Header 
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppTheme.bg,
+                  shape: BoxShape.circle,
+                  boxShadow: AppTheme.raisedShadow(distance: 6, blur: 16),
+                ),
+                child: const Icon(Icons.security_rounded,
+                    size: 34, color: AppTheme.primary),
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Permissions Required',
@@ -164,114 +183,54 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
                   color: AppTheme.textPrimary,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Dailathon needs these permissions to work.\nPlease grant all of them to continue.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
+              const SizedBox(height: 6),
+              Text(
+                _hasPermanent
+                    ? 'Some permissions were permanently denied. Open App Settings and enable them manually, then return here.'
+                    : 'Dailathon requires the following permissions to place and receive calls. All must be granted to continue.',
+                style: const TextStyle(
+                  fontSize: 13,
                   color: AppTheme.textSecondary,
+                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 28),
-              // List of denied permissions
-              ...List.generate(_denied.length, (i) {
-                final info = _denied[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x22000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(info.icon, color: AppTheme.primary, size: 28),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                info.label,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                info.description,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          info.permanentlyDenied
-                              ? Icons.block_rounded
-                              : Icons.close_rounded,
-                          color: Colors.redAccent,
-                          size: 22,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              const Spacer(flex: 3),
-              // Action buttons
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  icon: Icon(hasPermanent
-                      ? Icons.settings_rounded
-                      : Icons.check_circle_rounded),
-                  label: Text(
-                    hasPermanent
-                        ? 'Open App Settings'
-                        : 'Grant Permissions',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    if (hasPermanent) {
-                      openAppSettings();
-                    } else {
-                      _checkAndRequest();
-                    }
-                  },
+              //  Permission cards 
+              Expanded(
+                child: ListView.separated(
+                  itemCount: denied.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _PermCard(entry: denied[i]),
                 ),
               ),
-              if (hasPermanent) ...[
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: _checkOnly,
-                  child: const Text('I\'ve enabled them — Recheck'),
+              const SizedBox(height: 24),
+              //  Action buttons 
+              if (_hasPermanent) ...[
+                _PrimaryButton(
+                  label: 'Open App Settings',
+                  icon: Icons.settings_rounded,
+                  onTap: openAppSettings,
                 ),
-              ],
-              const SizedBox(height: 16),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton(
+                    onPressed: onRecheck,
+                    child: const Text(
+                      'I\'ve enabled them â€” Recheck',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else
+                _PrimaryButton(
+                  label: 'Grant Permissions',
+                  icon: Icons.check_circle_rounded,
+                  onTap: onGrant,
+                ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -280,17 +239,169 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
   }
 }
 
-class _PermissionInfo {
-  final Permission permission;
-  final String label;
-  final String description;
-  final IconData icon;
-  final bool permanentlyDenied;
-  const _PermissionInfo({
-    required this.permission,
+//  Individual permission card 
+
+class _PermCard extends StatelessWidget {
+  const _PermCard({required this.entry});
+  final _PermEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return NeuCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: entry.permanentlyDenied
+                  ? AppTheme.errorColor.withValues(alpha: 0.12)
+                  : AppTheme.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            ),
+            child: Icon(
+              entry.icon,
+              size: 22,
+              color: entry.permanentlyDenied
+                  ? AppTheme.errorColor
+                  : AppTheme.warning,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  entry.description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            entry.permanentlyDenied
+                ? Icons.block_rounded
+                : Icons.warning_amber_rounded,
+            size: 18,
+            color: entry.permanentlyDenied
+                ? AppTheme.errorColor
+                : AppTheme.warning,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+//  Primary button 
+
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({
     required this.label,
-    required this.description,
     required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppTheme.primary,
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primary.withValues(alpha: 0.38),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+//  Data model 
+
+class _PermEntry {
+  const _PermEntry({
+    required this.permission,
     required this.permanentlyDenied,
   });
+
+  final Permission permission;
+  final bool permanentlyDenied;
+
+  String get label {
+    switch (permission) {
+      case Permission.phone:        return 'Phone';
+      case Permission.microphone:   return 'Microphone';
+      case Permission.contacts:     return 'Contacts';
+      case Permission.notification: return 'Notifications';
+      default:                      return 'Permission';
+    }
+  }
+
+  String get description {
+    switch (permission) {
+      case Permission.phone:
+        return 'Required to place and manage phone calls.';
+      case Permission.microphone:
+        return 'Required for call audio during active calls.';
+      case Permission.contacts:
+        return 'Required to show your contacts in the dialer.';
+      case Permission.notification:
+        return 'Required to display incoming call alerts.';
+      default:
+        return 'Required for core app functionality.';
+    }
+  }
+
+  IconData get icon {
+    switch (permission) {
+      case Permission.phone:        return Icons.phone_rounded;
+      case Permission.microphone:   return Icons.mic_rounded;
+      case Permission.contacts:     return Icons.contacts_rounded;
+      case Permission.notification: return Icons.notifications_rounded;
+      default:                      return Icons.security_rounded;
+    }
+  }
 }

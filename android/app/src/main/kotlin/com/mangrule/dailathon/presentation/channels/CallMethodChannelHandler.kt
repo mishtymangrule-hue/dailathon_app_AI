@@ -82,6 +82,7 @@ class CallMethodChannelHandler @Inject constructor(
             "blockNumber" -> handleBlockNumber(call, result)
             "unblockNumber" -> handleUnblockNumber(call, result)
             "sendUssd" -> handleSendUssd(call, result)
+            "getSimSlots" -> handleGetPhoneAccounts(call, result)
             else -> result.notImplemented()
           }
         } catch (e: Exception) {
@@ -101,30 +102,77 @@ class CallMethodChannelHandler @Inject constructor(
 
     try {
       val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-
-      // Convert UI slot index to subscriptionId
-      val activeSims = simManager.getActiveSimSlots()
-      val subscriptionId = activeSims.getOrNull(simSlot)?.subscriptionId
-          ?: activeSims.firstOrNull()?.subscriptionId
-          ?: 0
-
-      val phoneAccountHandle = phoneAccountManager.getPhoneAccountHandle(subscriptionId)
-          ?: phoneAccountManager.getDefaultOutgoingAccount()
-          ?: run {
-            result.error("NO_ACCOUNT", "No phone account found for SIM $simSlot", null)
-            return@handleDial
-          }
-
       val uri = Uri.fromParts("tel", number, null)
-      val extras = android.os.Bundle().apply {
-        putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, phoneAccountHandle)
+
+      // Use the system's call-capable phone accounts (real SIM accounts from telephony stack)
+      // NOT the app's custom DialerConnectionService account.
+      val extras = android.os.Bundle()
+      val simHandle = getSystemSimPhoneAccountHandle(telecomManager, simSlot)
+      if (simHandle != null) {
+        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, simHandle)
       }
+
       telecomManager.placeCall(uri, extras)
-      Timber.v("Dial: number=$number, simSlot=$simSlot, subId=$subscriptionId")
+      Timber.v("Dial (placeCall): number=$number, simSlot=$simSlot, simHandle=${simHandle?.id}")
       result.success(null)
+    } catch (e: SecurityException) {
+      // App is not the default dialer — fall back to ACTION_CALL intent.
+      // This requires CALL_PHONE permission and lets the OS route the call.
+      Timber.w("placeCall denied (not default dialer), falling back to ACTION_CALL for $number")
+      try {
+        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${Uri.encode(number)}")).apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        result.success(null)
+      } catch (e2: Exception) {
+        Timber.e(e2, "ACTION_CALL fallback failed for $number")
+        result.error("DIAL_ERROR", e2.message, null)
+      }
     } catch (e: Exception) {
       Timber.e(e, "Failed to dial $number")
       result.error("DIAL_ERROR", e.message, null)
+    }
+  }
+
+  /**
+   * Returns the system telephony PhoneAccountHandle for the given UI slot index.
+   * Queries callCapablePhoneAccounts (real SIM accounts) rather than the app's
+   * custom DialerConnectionService handles.
+   */
+  @android.annotation.SuppressLint("MissingPermission")
+  private fun getSystemSimPhoneAccountHandle(
+    telecomManager: TelecomManager,
+    simSlot: Int,
+  ): android.telecom.PhoneAccountHandle? {
+    return try {
+      val accounts = telecomManager.callCapablePhoneAccounts
+      if (accounts.isEmpty()) return null
+
+      if (simSlot <= 0 || accounts.size == 1) {
+        return accounts.firstOrNull()
+      }
+
+      // Try to match by subscription ID for dual-SIM
+      val activeSims = simManager.getActiveSimSlots()
+      val targetSubId = activeSims.getOrNull(simSlot)?.subscriptionId
+
+      if (targetSubId != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE)
+            as android.telephony.TelephonyManager
+        val matched = accounts.firstOrNull { handle ->
+          try {
+            telephonyManager.createForPhoneAccountHandle(handle)?.subscriptionId == targetSubId
+          } catch (_: Exception) { false }
+        }
+        if (matched != null) return matched
+      }
+
+      // Fallback: index directly into the list
+      accounts.getOrNull(simSlot) ?: accounts.firstOrNull()
+    } catch (e: Exception) {
+      Timber.e(e, "Error resolving system SIM phone account for simSlot=$simSlot")
+      null
     }
   }
 
