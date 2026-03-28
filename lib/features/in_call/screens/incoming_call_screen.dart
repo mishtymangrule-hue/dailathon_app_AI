@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:dailathon_dialer/features/in_call/bloc/in_call_bloc.dart';
-import 'package:dailathon_dialer/core/channels/call_method_channel.dart';
-import 'package:dailathon_dialer/core/models/call_info.dart';
 import 'package:dailathon_dialer/core/service_locator.dart';
 import 'package:url_launcher/url_launcher.dart';
 

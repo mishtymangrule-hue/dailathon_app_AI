@@ -82,9 +82,6 @@
     <!-- Lock screen overlay for incoming calls -->
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
-    <!-- Network state control -->
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-
     <!-- REQUIRED for url_launcher on Android 11+ -->
     <queries>
         <intent>
